@@ -339,6 +339,12 @@ export slocate, sfindindex0, sfindindex, sarea
 export getareascale, getscale, getshift
 
 # Voronoi cells arranged in efficiently searchable array
+# structure is _ngrid by _ngrid array of arrays of indices into the linear array.
+# elements in the 2d array correspond to square regions covering area of point process.
+#  of all VoronoiCell's.
+# _cells -- linear array of all cells (currently in (almost) no order)
+# _grid -- 2d array of arrays of indices into _cells.
+# _scale, _shift, _areascale. For convenience of user. See scaled versions of functions below.
 type VoronoiCellsA
     _ngrid::Int
     _cells::Array{VoronoiCell,1}
@@ -351,6 +357,7 @@ end
 getareascale(gcells::VoronoiCellsA) = gcells._areascale
 getscale(gcells::VoronoiCellsA) = gcells._scale
 getshift(gcells::VoronoiCellsA) = gcells._shift
+# Note that c[i], c[i,j], c[i,j,k] return very differnt things
 getindex(c::VoronoiCellsA, i::Int) = c._cells[i]
 getindex(c::VoronoiCellsA, i::Int, j::Int) = c._grid[i,j]
 getindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._cells[c._grid[i,j][k]]
@@ -361,6 +368,7 @@ ngrid(c::VoronoiCellsA) = c._ngrid
 iscale(gc::VoronoiCellsA, x) = (x / gc._scale) + gc._shift
 iscale(gc::VoronoiCellsA, p::Point2D) = Point2D(iscale(getx(p)),iscale(gety(p)))
 
+# for initializing member _grid above
 function make_grid_array(ngrid::Int)
     gridcells = Array(Array{Int,1},ngrid,ngrid)
     for i in 1:ngrid
@@ -371,44 +379,58 @@ function make_grid_array(ngrid::Int)
     gridcells
 end
 
+# Find the element in the 2d grid containing the point (x,y)
 # Assume input point satisfies 1.0 <= x,y <= 2.0 (actually a bit different)
-# Divide this region into ngrid x ngrid grid and return index
+# Divide this region into ngrid x ngrid grid and return index.
 # of box that gp is in.
-# This probably throws away carefully preserved precision
-function find_generator_bin(x::Float64, y::Float64, ngrid::Int)
+# This probably throws away carefully preserved precision.
+# Should we use width of area rather than 1.0 ?
+function find_grid_element(x::Float64, y::Float64, ngrid::Int)
     ix = round(Int64, (x - 1.0) * ngrid) + 1
     iy = round(Int64, (y - 1.0) * ngrid) + 1
     ix > ngrid ? ix = ngrid : nothing
     iy > ngrid ? iy = ngrid : nothing
     ix < 1 ? ix = 1 : nothing
     iy < 1 ? iy = 1 : nothing
-    return (ix,iy)
+    return (ix,iy)  # return indices
 end
 
-find_generator_bin(p::Point2D, ngrid::Int) = find_generator_bin(getx(p),gety(p),ngrid)
-find_generator_bin(cell::VoronoiCell, ngrid::Int) = find_generator_bin(cell._generator, ngrid)
+find_grid_element(p::Point2D, ngrid::Int) = find_grid_element(getx(p),gety(p),ngrid)
+find_grid_element(cell::VoronoiCell, ngrid::Int) = find_grid_element(cell._generator, ngrid)
 
+# Assign indices of cells in big linear array to arrays in each
+# grid element and return new object.
+# Cells are assigned to the grid element the generator of the cell is in.
 function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int)
     gridcells = make_grid_array(ngrid)
     for i in 1:length(cells)
         cell = cells[i]
-        (ix,iy) = find_generator_bin(cell,ngrid)
+        (ix,iy) = find_grid_element(cell,ngrid)
         push!(gridcells[ix,iy], i)
     end
     VoronoiCellsA(ngrid,cells,gridcells,1.0,0.0,1.0)
 end
 
+# generate big array of cells from tesselation and store them in grid structure
 function voronoicells(t::DelaunayTessellation2D, ngrid::Int)
     cells = collect(VoronoiCell,voronoicellsnogrid(t))
     cellstogrid(cells, ngrid)
 end
 
+# generate as above, but choose a good default number of elements in the grid based on the
+# number of cells (good if they are uniformly distributed)
 function voronoicells(t::DelaunayTessellation2D)
     cells = collect(VoronoiCell,voronoicellsnogrid(t))    
     ngrid = round(Int,sqrt(length(cells))/10)
     cellstogrid(cells, ngrid)
 end
 
+# find index in short array of indices into big array of indices of cells
+# such that the cell contains point (x,y). If no such index exists in the
+# short array, return zero.
+# cells -- array of all cells
+# indarray -- array of indices into cells corresponding one grid element
+# x,y -- point in cell we are searching for
 function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, x,y)
     ifound = 0
     for i in 1:length(indarray)
@@ -423,29 +445,25 @@ end
 # Find index into gc._cells of cell containing (x,y) searching in indarray
 findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D) = findindexA(cells,indarray,getx(p),gety(p))
 
+# same as findindexA, but gc contains all structures and we identify index (i,j)
+# of grid element corresponding to short array of indices.
 # Find cell containing (x,y) in bin (i,j) and return index into gc._cells
 findindexingrid(gc::VoronoiCellsA, i, j, x, y) = findindexA(gc._cells,gc._grid[i,j],x,y)
 
-#findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D) = findindexA(cells,indarray,getx(p),gety(p))
-
-function findindex(gridcells::VoronoiCellsA, p::Point2D)
-    (ix,iy,ind) = findindex0(gridcells,p)
-    ind == 0 && error("locate: Can't find grid box for point ", p, ".")
-    return(ix,iy,ind)
-end
-
-findindex(gridcells::VoronoiCellsA, x,y) = findindex(gridcells, Point2D(x,y))
 
 # TODO: make cleaner use of (x,y)  <--> Point2D(x,y)
 function findindex00(gridcells::VoronoiCellsA, x::Float64, y::Float64)
-    (ix::Int,iy::Int) = find_generator_bin(x,y,size(gridcells._grid,1))
+    (ix::Int,iy::Int) = find_grid_element(x,y,size(gridcells._grid,1))
     ind::Int = findindexA(gridcells._cells, gridcells._grid[ix,iy], Point2D(x,y))
     return(ix,iy,ind)
 end
 
+# Find index of cell in gc containing point p.
+# using the grid makes the search efficient.
 # Rounding errors cause point to not be found in a computed grid bin for about 2/3 percent
 # of randomly chosen points. In these cases, we look for the point in the neighboring bins.
 # Test shows that this works for all random points (no misses found in 10^7 or more trials)
+# Each case below occurs in 10^6 trials.
 function findindex0(gc::VoronoiCellsA, p::Point2D)
     (x,y) = (getx(p),gety(p))
     (ix::Int,iy::Int, ind::Int) = findindex00(gc,x,y)
@@ -499,14 +517,25 @@ function findindex0(gc::VoronoiCellsA, p::Point2D)
 end
 
 # User gives last returned index as hint if new p is close to p for last call
+# i.e. assume we are in the same cell. We also assume that the same indices
+# ix,iy will be computed. If hint is wrong, we do the usual search.
 function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
-    (ix,iy) = find_generator_bin(p,size(gridcells._grid,1))
+    (ix,iy) = find_grid_element(p,size(gridcells._grid,1))
     invoronoicell(gridcells[ix,iy,hint],p) && return (ix,iy,hint)
     findindex0(gridcells,p)
 end
 
 findindex0(gridcells::VoronoiCellsA, x,y) = findindex0(gridcells, Point2D(x,y))
 findindex0(gridcells::VoronoiCellsA, hint::Int, x,y) = findindex0(gridcells, hint, Point2D(x,y))
+
+# Probably don't use this, because we would have to prevent errors first,
+# which is expensive.
+function findindex(gridcells::VoronoiCellsA, p::Point2D)
+    (ix,iy,ind) = findindex0(gridcells,p)
+    ind == 0 && error("locate: Can't find grid box for point ", p, ".")
+    return(ix,iy,ind)
+end
+findindex(gridcells::VoronoiCellsA, x,y) = findindex(gridcells, Point2D(x,y))
 
 # Return false if there is no complete cell containing p
 function isexternal(gridcells::VoronoiCellsA, p::Point2D)
@@ -526,6 +555,7 @@ end
 
 locate(gridcells::VoronoiCellsA,x,y) =  locate(gridcells, Point2D(x,y))
 
+# Return just the tesselation structure.
 function poissontesselation(n::Int)
     width = max_coord - min_coord
     a = Point2D[Point(min_coord+rand()*width, min_coord+rand()*width) for i in 1:n]
@@ -534,6 +564,8 @@ function poissontesselation(n::Int)
     tess
 end
 
+# Create tesselation of poisson point process sample.
+# Return only the efficient cell structure.
 function poissonvoronoicells(n::Int,ngrid::Int)
     tess = poissontesselation(n)
     gcells = voronoicells(tess,ngrid)
@@ -541,6 +573,7 @@ function poissonvoronoicells(n::Int,ngrid::Int)
     gcells    
 end
 
+# Same as above, but calculate standard grid sized from number of cells
 function poissonvoronoicells(n::Int)
     tess = poissontesselation(n)
     gcells = voronoicells(tess)
@@ -550,6 +583,8 @@ end
 
 ####
 
+# For Poisson point process, origin is at zero zero and average cell
+# size is 1.
 function standard_scale_and_shift!(gcells::VoronoiCellsA, n::Int)
     gcells._shift = 1.5
     gcells._scale = sqrt(n)
