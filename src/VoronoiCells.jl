@@ -54,7 +54,8 @@ inconvexpolygon(poly::Array{Point2D,1}, p::Point2D) = inconvexpolygon(poly,getx(
 # tr._neighbour_a is the neighboring triangle sharing the edge in tr that is opposite point a
 # tr._neighbour_b, tr._neighbour_c contain the vertex a, while tr._neighbour_a does not.
 
-#### Some functions that only operate on VoronoiDelaunay
+#### A function that only operates on VoronoiDelaunay
+# Get vertex by integer index (1,2,3) are (a,b,c)
 function get_vertex(trig::VoronoiDelaunay.DelaunayTriangle, iv::Int)
     if iv == 1
         geta(trig)
@@ -70,19 +71,16 @@ end
 #### Begin code specific to VoronoiCells
 
 # 2D
+# _generator is one of the points in the point process. There is exactly one such point in each
+# cell.
 type VoronoiCell
     _generator
     _verts::Array{Point2D,1}
     # neigbhors ?
 end
 
-function VoronoiCell(generator)
-    VoronoiCell(generator, Array(Point2D, 0))
-end
-
-function npoints(c::VoronoiCell)
-    length(c._verts)
-end
+VoronoiCell(generator) = VoronoiCell(generator, Array(Point2D, 0))
+npoints(c::VoronoiCell) = length(c._verts)
 
 # Area of irregular polygon. Don't make use of convex property.
 function area(c::VoronoiCell)
@@ -132,9 +130,7 @@ function findindex(cells::Array{VoronoiCell,1}, p::Point2D)
 end
 
 # could do this with iterator, I suppose, but that constructs all cells every time
-function locate(cells::Array{VoronoiCell,1}, p::Point2D)
-    cells[findindex(cells,p)]
-end
+locate(cells::Array{VoronoiCell,1}, p::Point2D) = cells[findindex(cells,p)]
 
 function get_neighbor(trigs,trig,iv)
     if iv == 1
@@ -238,42 +234,42 @@ function find_cell(trigs,tr, iv_gen, iv_opp, visited)
     (is_visited,cell)
 end
 
-function voronoicells2(t::DelaunayTessellation2D)
-    visited = zeros(Bool, t._last_trig_index)
-    visited[1] = true
-    function voronoicelliterator()
-        j = 0
-	for ix in 2:t._last_trig_index
-	    visited[ix] && continue
-	    const tr = t._trigs[ix]
-	    visited[ix] = true            
-            isexternal(tr) && continue
-            for iv_gen in 1:3
+# function voronoicells2(t::DelaunayTessellation2D)
+#     visited = zeros(Bool, t._last_trig_index)
+#     visited[1] = true
+#     function voronoicelliterator()
+#         j = 0
+# 	for ix in 2:t._last_trig_index
+# 	    visited[ix] && continue
+# 	    const tr = t._trigs[ix]
+# 	    visited[ix] = true            
+#             isexternal(tr) && continue
+#             for iv_gen in 1:3
 
-                iv_opp = mod1(iv_gen+1,3) # pick one of the other two vertices
+#                 iv_opp = mod1(iv_gen+1,3) # pick one of the other two vertices
 
-                # ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
-                # visited[ix2] && continue
+#                 # ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
+#                 # visited[ix2] && continue
 
-                #                isexternal(t._trigs[ix2]) && continue
+#                 #                isexternal(t._trigs[ix2]) && continue
 
-                # iv_opp = mod1(iv_gen+2,3) # pick the remaining vertex
-                # ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
-                # visited[ix2] && continue
+#                 # iv_opp = mod1(iv_gen+2,3) # pick the remaining vertex
+#                 # ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
+#                 # visited[ix2] && continue
 
-                #                isexternal(t._trigs[ix2]) && continue
+#                 #                isexternal(t._trigs[ix2]) && continue
 
-                (is_visited, cell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
-                is_visited && continue
-                j += 1
-#                j > 10000 && return
-                isexternal(cell) && continue # just checking each triangle does not seem to work.
-                produce(cell)
-            end
-        end
-    end
-    Task(voronoicelliterator)
-end
+#                 (is_visited, cell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
+#                 is_visited && continue
+#                 j += 1
+# #                j > 10000 && return
+#                 isexternal(cell) && continue # just checking each triangle does not seem to work.
+#                 produce(cell)
+#             end
+#         end
+#     end
+#     Task(voronoicelliterator)
+# end
 
 function voronoicellsnogrid(t::DelaunayTessellation2D)
     visited = zeros(Bool, t._last_trig_index)
