@@ -11,90 +11,26 @@ export isexternal
 const min_coord = GeometricalPredicates.min_coord + eps(Float64)
 const max_coord = GeometricalPredicates.max_coord - eps(Float64)
 
-# Euclidean
+#### Some functions that only operate on GeometricalPredicates
+
+# Euclidean distance
 function distance(p1::Point2D,p2::Point2D)
     (getx(p2)-getx(p1))^2 + (gety(p2)-gety(p1))^2
 end
 
-# Maybe faster than Euclidean
+# Maybe faster than Euclidean, and is sufficient for use below
 function distanceL1(p1::Point2D,p2::Point2D)
     abs(getx(p2)-getx(p1)) + abs(gety(p2)-gety(p1))
 end
 
-function -(p1::Point2D,p2::Point2D)
-    Point2D(getx(p1)-getx(p2),gety(p1)-gety(p2))
-end
+# Removed use of this. Maybe remove this, as well
+-(p1::Point2D,p2::Point2D) = Point2D(getx(p1)-getx(p2),gety(p1)-gety(p2))
 
-# Note regarding DelaunayTriangle:
-# tr._neighbour_a is the neighboring triangle sharing the edge in tr that is opposite point a
-# tr._neighbour_b, tr._neighbour_c contain the vertex a, while tr._neighbour_a does not.
+# sign shows which side of line between P(x1,y1) P(x2,y2) the point
+# P(x,y) lies
+lineside(x1,y1,x2,y2,x,y) = (y-y1)*(x2-x1) - (x-x1)*(y2-y1)
 
-# For triangles
-function get_vertex(trig::VoronoiDelaunay.DelaunayTriangle, iv::Int)
-    if iv == 1
-        geta(trig)
-    elseif iv == 2
-        getb(trig)
-    elseif iv == 3
-        getc(trig)
-    else
-        error("Vertex index must be 1,2, or 3. Got $iv.")
-    end
-end
-
-
-# 2D
-type VoronoiCell
-    _generator
-    _verts::Array{Point2D,1}
-    # neigbhors ?
-end
-
-function VoronoiCell(generator)
-    VoronoiCell(generator, Array(Point2D, 0))
-end
-
-function npoints(c::VoronoiCell)
-    length(c._verts)
-end
-
-# Area of irregular polygon.
-function area(c::VoronoiCell)
-    vs = c._verts
-    A = 0.0
-    n = length(vs)
-    for i in 1:n-1
-        A += getx(vs[i])*gety(vs[i+1]) -  getx(vs[i+1])*gety(vs[i])
-    end
-    A += getx(vs[n])*gety(vs[1]) -  getx(vs[1])*gety(vs[n])
-    0.5 * abs(A)
-end
-
-# is any vertex on hull of cell outside of allowed range
-function isexternal(c::VoronoiCell)
-    vs = c._verts
-    n = length(vs)
-    found_external = false
-    for i in 1:n
-        xc = getx(vs[i])
-        if xc < min_coord || xc > max_coord
-            found_external = true
-            break
-        end
-        yc = gety(vs[i])
-        if yc < min_coord || yc > max_coord
-            found_external = true
-            break
-        end        
-    end
-    found_external
-end
-
-function lineside(x1,y1,x2,y2,x,y)
-    (y-y1)*(x2-x1) - (x-x1)*(y2-y1)
-end
-
-# true if p is inside poly
+# true if p is inside poly, ie. if lineside gives the same sign for all edges in Voronoi cell
 function inconvexpolygon(poly::Array{Point2D,1}, x,y)
     is_inconvexpolygon = true
     n = length(poly)
@@ -113,6 +49,72 @@ function inconvexpolygon(poly::Array{Point2D,1}, x,y)
     is_inconvexpolygon
 end
 inconvexpolygon(poly::Array{Point2D,1}, p::Point2D) = inconvexpolygon(poly,getx(p),gety(p))
+
+# Note regarding DelaunayTriangle:
+# tr._neighbour_a is the neighboring triangle sharing the edge in tr that is opposite point a
+# tr._neighbour_b, tr._neighbour_c contain the vertex a, while tr._neighbour_a does not.
+
+#### Some functions that only operate on VoronoiDelaunay
+function get_vertex(trig::VoronoiDelaunay.DelaunayTriangle, iv::Int)
+    if iv == 1
+        geta(trig)
+    elseif iv == 2
+        getb(trig)
+    elseif iv == 3
+        getc(trig)
+    else
+        error("Vertex index must be 1,2, or 3. Got $iv.")
+    end
+end
+
+#### Begin code specific to VoronoiCells
+
+# 2D
+type VoronoiCell
+    _generator
+    _verts::Array{Point2D,1}
+    # neigbhors ?
+end
+
+function VoronoiCell(generator)
+    VoronoiCell(generator, Array(Point2D, 0))
+end
+
+function npoints(c::VoronoiCell)
+    length(c._verts)
+end
+
+# Area of irregular polygon. Don't make use of convex property.
+function area(c::VoronoiCell)
+    vs = c._verts
+    A = 0.0
+    n = length(vs)
+    for i in 1:n-1
+        A += getx(vs[i])*gety(vs[i+1]) -  getx(vs[i+1])*gety(vs[i])
+    end
+    A += getx(vs[n])*gety(vs[1]) -  getx(vs[1])*gety(vs[n])
+    0.5 * abs(A)
+end
+
+# is any vertex on boundary of cell outside of allowed range
+function isexternal(c::VoronoiCell)
+    vs = c._verts
+    n = length(vs)
+    found_external = false
+    for i in 1:n
+        xc = getx(vs[i])
+        if xc < min_coord || xc > max_coord
+            found_external = true
+            break
+        end
+        yc = gety(vs[i])
+        if yc < min_coord || yc > max_coord
+            found_external = true
+            break
+        end        
+    end
+    found_external
+end
 
 invoronoicell(c::VoronoiCell, p::Point2D) = inconvexpolygon(c._verts,p)
 invoronoicell(c::VoronoiCell, x,y) = inconvexpolygon(c._verts,x,y)
@@ -322,11 +324,18 @@ type VoronoiCellsA
     _areascale::Float64
 end
 
+getareascale(gcells::VoronoiCellsA) = gcells._areascale
+getscale(gcells::VoronoiCellsA) = gcells._scale
+getshift(gcells::VoronoiCellsA) = gcells._shift
 getindex(c::VoronoiCellsA, i::Int) = c._cells[i]
 getindex(c::VoronoiCellsA, i::Int, j::Int) = c._grid[i,j]
 getindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._cells[c._grid[i,j][k]]
 Base.length(c::VoronoiCellsA) = length(c._cells)
 ngrid(c::VoronoiCellsA) = c._ngrid
+
+# inverse of scaling of coordinates
+iscale(gc::VoronoiCellsA, x) = (x / gc._scale) + gc._shift
+iscale(gc::VoronoiCellsA, p::Point2D) = Point2D(iscale(getx(p)),iscale(gety(p)))
 
 function make_grid_array(ngrid::Int)
     gridcells = Array(Array{Int,1},ngrid,ngrid)
@@ -524,18 +533,9 @@ function standard_scale_and_shift!(gcells::VoronoiCellsA, n::Int)
     nothing
 end
 
-function iscale(gc::VoronoiCellsA, x)
-    (x / gc._scale) + gc._shift
-end
-
-function iscale(gc::VoronoiCellsA, p::Point2D)
-    Point2D(iscale(getx(p)),iscale(gety(p)))
-end
-
-getareascale(gcells::VoronoiCellsA) = gcells._areascale
-getscale(gcells::VoronoiCellsA) = gcells._scale
-getshift(gcells::VoronoiCellsA) = gcells._shift
-
+# Scaled versions of some functions. The tesselated region, approximately
+# 1.0 <= x,y, 2.0  is scaled and shifted to coordinates convenient for the
+# user.
 slocate(gcells::VoronoiCellsA,x,y) = locate(gcells,iscale(gcells,x),iscale(gcells,y))
 slocate(gcells::VoronoiCellsA, p::Point2D) = locate(gridcells, iscale(p))
 sfindindex0(gcells::VoronoiCellsA, x,y) = findindex0(gcells,iscale(gcells,x),iscale(gcells,y))
