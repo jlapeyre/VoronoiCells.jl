@@ -6,6 +6,7 @@ import GeometricalPredicates
 import VoronoiDelaunay.isexternal, VoronoiDelaunay.locate, VoronoiDelaunay.findindex
 
 export VoronoiCell, voronoicells, voronoicellsnogrid, voronoicells2, findindex, locate, invoronoicell, area
+export isexternal
 
 const min_coord = GeometricalPredicates.min_coord + eps(Float64)
 const max_coord = GeometricalPredicates.max_coord - eps(Float64)
@@ -310,7 +311,7 @@ function voronoicellsnogrid(t::DelaunayTessellation2D)
 end
 
 export cellstogrid, poissontesselation, poissonvoronoicells, ngrid, findindex0
-export slocate, sfindindex0, sfindindex
+export slocate, sfindindex0, sfindindex, sarea
 export getareascale, getscale, getshift
 
 # Voronoi cells arranged in efficiently searchable array
@@ -325,7 +326,7 @@ end
 
 getindex(c::VoronoiCellsA, i::Int) = c._cells[i]
 getindex(c::VoronoiCellsA, i::Int, j::Int) = c._grid[i,j]
-getindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._cells[c._grid[j,k][i]]
+getindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._cells[c._grid[i,j][k]]
 Base.length(c::VoronoiCellsA) = length(c._cells)
 ngrid(c::VoronoiCellsA) = c._ngrid
 
@@ -376,16 +377,6 @@ function voronoicells(t::DelaunayTessellation2D)
     cellstogrid(cells, ngrid)
 end
 
-# Return false if there is no complete cell containing p
-function isexternal(gridcells::VoronoiCellsA, p::Point2D)
-    (ix,iy) = find_generator_bin(p,size(gridcells._grid,1))
-    ind = findindexA(gridcells._cells, gridcells._grid[ix,iy], p)
-    ind == 0 && return true
-    return false
-end
-
-isexternal(gridcells::VoronoiCellsA, x, y) = isexternal(gridcells,Point2D(x,y))
-
 function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D)
     ifound = 0
     for i in 1:length(indarray)
@@ -399,24 +390,42 @@ end
 
 function findindex(gridcells::VoronoiCellsA, p::Point2D)
     (ix,iy) = find_generator_bin(p,size(gridcells._grid,1))
-    # locate in VornoiCells is not recognized,... broken
     ind = findindexA(gridcells._cells, gridcells._grid[ix,iy], p)
     ind == 0 && error("locate: Can't find grid box for point ", p, ".")
-    return(ind,ix,iy)
+    return(ix,iy,ind)
 end
 
 findindex(gridcells::VoronoiCellsA, x,y) = findindex(gridcells, Point2D(x,y))
 
 function findindex0(gridcells::VoronoiCellsA, p::Point2D)
+    (ix::Int,iy::Int) = find_generator_bin(p,size(gridcells._grid,1))
+    ind::Int = findindexA(gridcells._cells, gridcells._grid[ix,iy], p)
+    return(ix,iy,ind)
+end
+
+# Use last index as hint if p is close to p for last call
+function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
     (ix,iy) = find_generator_bin(p,size(gridcells._grid,1))
+    invoronoicell(gridcells[ix,iy,hint],p) && return (ix,iy,hint)
     ind = findindexA(gridcells._cells, gridcells._grid[ix,iy], p)
-    return(ind,ix,iy)
+    return(ix,iy,ind)
 end
 
 findindex0(gridcells::VoronoiCellsA, x,y) = findindex0(gridcells, Point2D(x,y))
+findindex0(gridcells::VoronoiCellsA, hint::Int, x,y) = findindex0(gridcells, hint, Point2D(x,y))
 
+# Return false if there is no complete cell containing p
+function isexternal(gridcells::VoronoiCellsA, p::Point2D)
+    (ix,iy,ind) = findindex0(gridcells,p)
+    ind == 0 && return true
+    return false
+end
+
+isexternal(gridcells::VoronoiCellsA, x, y) = isexternal(gridcells,Point2D(x,y))
+
+# Careful with these, they don't check for ind == 0
 function locate(gridcells::VoronoiCellsA, p::Point2D)
-    (ind,ix,iy) = findindex(gridcells,p)
+    (ix,iy,ind) = findindex(gridcells,p)
     cellind = gridcells._grid[ix,iy][ind]
     gridcells._cells[cellind]
 end
@@ -470,7 +479,11 @@ slocate(gcells::VoronoiCellsA,x,y) = locate(gcells,iscale(gcells,x),iscale(gcell
 slocate(gcells::VoronoiCellsA, p::Point2D) = locate(gridcells, iscale(p))
 sfindindex0(gcells::VoronoiCellsA, x,y) = findindex0(gcells,iscale(gcells,x),iscale(gcells,y))
 sfindindex0(gcells::VoronoiCellsA, p::Point2D) = findindex0(gcells, iscale(p))
+sfindindex0(gcells::VoronoiCellsA, hint, x,y) = findindex0(gcells,hint,iscale(gcells,x),iscale(gcells,y))
+sfindindex0(gcells::VoronoiCellsA, hint, p::Point2D) = findindex0(gcells, hint, iscale(p))
 sfindindex(gcells::VoronoiCellsA, x,y) = findindex(gcells,iscale(gcells,x),iscale(gcells,y))
 sfindindex(gcells::VoronoiCellsA, p::Point2D) = findindex(gcells, iscale(p))
+sarea(gcells::VoronoiCellsA, i::Int) = area(gcells[i]) * getareascale(gcells)
+sarea(gcells::VoronoiCellsA, i::Int, j::Int, k::Int) = area(gcells[i,j,k]) * getareascale(gcells)
 
 end # module
