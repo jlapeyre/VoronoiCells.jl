@@ -50,11 +50,8 @@ function inconvexpolygon(poly::Array{Point2D,1}, x,y)
 end
 inconvexpolygon(poly::Array{Point2D,1}, p::Point2D) = inconvexpolygon(poly,getx(p),gety(p))
 
-# Note regarding DelaunayTriangle:
-# tr._neighbour_a is the neighboring triangle sharing the edge in tr that is opposite point a
-# tr._neighbour_b, tr._neighbour_c contain the vertex a, while tr._neighbour_a does not.
+#### Some functions that only operate on VoronoiDelaunay objects.
 
-#### A function that only operates on VoronoiDelaunay
 # Get vertex by integer index (1,2,3) are (a,b,c)
 function get_vertex(trig::VoronoiDelaunay.DelaunayTriangle, iv::Int)
     if iv == 1
@@ -66,6 +63,107 @@ function get_vertex(trig::VoronoiDelaunay.DelaunayTriangle, iv::Int)
     else
         error("Vertex index must be 1,2, or 3. Got $iv.")
     end
+end
+
+# Get the neigboring triangle sharing side opposite vertex a,b,c via indices 1,2,3.
+# Note regarding DelaunayTriangle:
+# tr._neighbour_a is the neighboring triangle sharing the edge in tr that is opposite point a
+# tr._neighbour_b, tr._neighbour_c contain the vertex a, while tr._neighbour_a does not.
+function get_neighbor(trigs,trig,iv)
+    if iv == 1
+        trigs[trig._neighbour_a]
+    elseif iv == 2
+        trigs[trig._neighbour_b]
+    elseif iv == 3
+        trigs[trig._neighbour_c]
+    else
+        error("Neighbor index must be 1,2, or 3. Got $iv.")
+    end
+end
+
+# Same as above, but return index of triangle in array of Delaunay triangles,
+# rather than the triangle itself
+function get_neighbor_index(trigs,trig,iv)
+    if iv == 1
+        trig._neighbour_a
+    elseif iv == 2
+        trig._neighbour_b
+    elseif iv == 3
+        trig._neighbour_c
+    else
+        error("Neighbor index must be 1,2, or 3. Got $iv.")
+    end
+end
+
+# Return 1,2, or 3 if one of the three vertices a,b, or c
+# in triangle tr is equal to point p0. error otherwise.
+function match_vertex(tr, p0)
+    eps0 = eps(min_coord) # same as for max_coord
+    pa = geta(tr)
+    if distanceL1(pa,p0) <= eps0
+        return 1
+    else
+        pb = getb(tr)
+        if distanceL1(pb,p0) <= eps0
+            return 2
+        else
+            pc = getc(tr)
+            if distanceL1(pc,p0) <= eps0
+                return 3
+            end
+        end
+    end
+    error("match_vertex: Given triangle does not contain given vertex")
+end
+
+# return complement of {v1,v2} in {1,2,3}
+# i.e. if input is 3,2, we return 1.
+function match_other_vertex(v1,v2)
+    v1 == v2 &&  error("Can't find other vertex: v1=$v1 v2=$v2")
+    if v1 == 1
+        if v2 == 2
+            return 3
+        else
+            return 2
+        end
+    elseif v1 == 2
+        if v2 == 1
+            return 3
+        else
+            return 1
+        end
+    elseif v1 == 3
+        if v2 == 1
+            return 2
+        else
+            return 1
+        end        
+    else
+        error("Can't find other vertex: v1=$v1 v2=$v2")
+    end
+end
+
+# Find the next DelaunayTriangle triangle when building a VoronoiCell
+# trigs is array of DelaunayTriangles
+# tr is current triangle
+# iv_gen is index (recall (1,2,3) <--> (a,b,c)) of generator point in the triangle tr
+#  for the cell we are building. Each triangle has the generator as a vertex, but
+#  the index may vary with the triangles.
+# iv_opp is the index of the vertex opposite the side that is shared with the
+#  next triangle.
+# iv_other is the index remaining vertex
+# return:
+# tr2 the next triangle in the cell
+# itr2 the index into the array of all DelaunayTriangle's of tr2
+
+function next_cell_triangle(trigs,tr,iv_gen::Int,iv_opp::Int, iv_other::Int)
+    eps0 = eps(min_coord)
+    tr2 = get_neighbor(trigs,tr,iv_opp)
+    itr2 = get_neighbor_index(trigs,tr,iv_opp)
+    iv_gen2 = match_vertex(tr2,get_vertex(tr,iv_gen))
+    iv_opp2 = match_vertex(tr2,get_vertex(tr,iv_other))
+    iv_other2 = match_other_vertex(iv_gen2, iv_opp2)
+    return (tr2, itr2, iv_gen2, iv_opp2, iv_other2)
 end
 
 #### Begin code specific to VoronoiCells
@@ -134,86 +232,9 @@ function findindex(cells::Array{VoronoiCell,1}, p::Point2D)
 end
 
 # could do this with iterator, I suppose, but that constructs all cells every time
+# return the cell rather than index. Do not check for error (index == 0 )
 locate(cells::Array{VoronoiCell,1}, p::Point2D) = cells[findindex(cells,p)]
 
-function get_neighbor(trigs,trig,iv)
-    if iv == 1
-        trigs[trig._neighbour_a]
-    elseif iv == 2
-        trigs[trig._neighbour_b]
-    elseif iv == 3
-        trigs[trig._neighbour_c]
-    else
-        error("Neighbor index must be 1,2, or 3. Got $iv.")
-    end
-end
-
-function get_neighbor_index(trigs,trig,iv)
-    if iv == 1
-        trig._neighbour_a
-    elseif iv == 2
-        trig._neighbour_b
-    elseif iv == 3
-        trig._neighbour_c
-    else
-        error("Neighbor index must be 1,2, or 3. Got $iv.")
-    end
-end
-
-function match_vertex(tr, p0)
-    eps0 = eps(min_coord) # same as for max_coord
-    pa = geta(tr)
-    if distanceL1(pa,p0) <= eps0
-        return 1
-    else
-        pb = getb(tr)
-        if distanceL1(pb,p0) <= eps0
-            return 2
-        else
-            pc = getc(tr)
-            if distanceL1(pc,p0) <= eps0
-                return 3
-            end
-        end
-    end
-    error("match_vertex: Given triangle does not contain given vertex")
-end
-
-# return complement of {v1,v2} in {1,2,3}
-function match_other_vertex(v1,v2)
-    v1 == v2 &&  error("Can't find other vertex: v1=$v1 v2=$v2")
-    if v1 == 1
-        if v2 == 2
-            return 3
-        else
-            return 2
-        end
-    elseif v1 == 2
-        if v2 == 1
-            return 3
-        else
-            return 1
-        end
-    elseif v1 == 3
-        if v2 == 1
-            return 2
-        else
-            return 1
-        end        
-    else
-        error("Can't find other vertex: v1=$v1 v2=$v2")
-    end
-end
-
-function next_cell_triangle(trigs,tr,iv_gen,iv_opp, iv_other)
-    eps0 = eps(min_coord)
-    tr2 = get_neighbor(trigs,tr,iv_opp)
-    itr2 = get_neighbor_index(trigs,tr,iv_opp)
-    iv_gen2 = match_vertex(tr2,get_vertex(tr,iv_gen))
-    iv_opp2 = match_vertex(tr2,get_vertex(tr,iv_other))
-    iv_other2 = match_other_vertex(iv_gen2, iv_opp2)
-    return (tr2, itr2, iv_gen2, iv_opp2, iv_other2)
-end
 
 function find_cell(trigs,tr, iv_gen, iv_opp, visited)
     cell = VoronoiCell(get_vertex(tr, iv_gen))
