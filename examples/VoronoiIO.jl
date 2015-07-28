@@ -1,6 +1,8 @@
 using VoronoiDelaunay
 using VoronoiCells
 
+# Much of this may not work anymore
+
 # I think getx,gety not implemented for abstract Points
 print_pt(str::IOStream, p::GeometricalPredicates.Point2D) = println(str,getx(p), " ", gety(p))
 
