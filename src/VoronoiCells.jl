@@ -95,10 +95,8 @@ function lineside(x1,y1,x2,y2,x,y)
 end
 
 # true if p is inside poly
-function inconvexpolygon(poly::Array{Point2D,1}, p::Point2D)
+function inconvexpolygon(poly::Array{Point2D,1}, x,y)
     is_inconvexpolygon = true
-    x = getx(p)
-    y = gety(p)
     n = length(poly)
     p1 = poly[n]
     p2 = poly[1]
@@ -114,10 +112,10 @@ function inconvexpolygon(poly::Array{Point2D,1}, p::Point2D)
     end
     is_inconvexpolygon
 end
+inconvexpolygon(poly::Array{Point2D,1}, p::Point2D) = inconvexpolygon(poly,getx(p),gety(p))
 
-function invoronoicell(c::VoronoiCell, p::Point2D)
-    inconvexpolygon(c._verts,p)
-end
+invoronoicell(c::VoronoiCell, p::Point2D) = inconvexpolygon(c._verts,p)
+invoronoicell(c::VoronoiCell, x,y) = inconvexpolygon(c._verts,x,y)
 
 # linear search
 function findindex(cells::Array{VoronoiCell,1}, p::Point2D)
@@ -344,9 +342,9 @@ end
 # Divide this region into ngrid x ngrid grid and return index
 # of box that gp is in.
 # This probably throws away carefully preserved precision
-function find_generator_bin(gp::Point2D, ngrid::Int)
-    ix = round(Int64, (getx(gp) - 1.0) * ngrid) + 1
-    iy = round(Int64, (gety(gp) - 1.0) * ngrid) + 1
+function find_generator_bin(x::Float64, y::Float64, ngrid::Int)
+    ix = round(Int64, (x - 1.0) * ngrid) + 1
+    iy = round(Int64, (y - 1.0) * ngrid) + 1
     ix > ngrid ? ix = ngrid : nothing
     iy > ngrid ? iy = ngrid : nothing
     ix < 1 ? ix = 1 : nothing
@@ -354,6 +352,7 @@ function find_generator_bin(gp::Point2D, ngrid::Int)
     return (ix,iy)
 end
 
+find_generator_bin(p::Point2D, ngrid::Int) = find_generator_bin(getx(p),gety(p),ngrid)
 find_generator_bin(cell::VoronoiCell, ngrid::Int) = find_generator_bin(cell._generator, ngrid)
 
 function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int)
@@ -377,10 +376,10 @@ function voronoicells(t::DelaunayTessellation2D)
     cellstogrid(cells, ngrid)
 end
 
-function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D)
+function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, x,y)
     ifound = 0
     for i in 1:length(indarray)
-        if invoronoicell(cells[indarray[i]],p)
+        if invoronoicell(cells[indarray[i]],x,y)
             ifound = i
             break
         end
@@ -388,27 +387,89 @@ function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Poin
     ifound
 end
 
+# Find index into gc._cells of cell containing (x,y) searching in indarray
+findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D) = findindexA(cells,indarray,getx(p),gety(p))
+
+# Find cell containing (x,y) in bin (i,j) and return index into gc._cells
+findindexingrid(gc::VoronoiCellsA, i, j, x, y) = findindexA(gc._cells,gc._grid[i,j],x,y)
+
+#findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D) = findindexA(cells,indarray,getx(p),gety(p))
+
 function findindex(gridcells::VoronoiCellsA, p::Point2D)
-    (ix,iy) = find_generator_bin(p,size(gridcells._grid,1))
-    ind = findindexA(gridcells._cells, gridcells._grid[ix,iy], p)
+    (ix,iy,ind) = findindex0(gridcells,p)
     ind == 0 && error("locate: Can't find grid box for point ", p, ".")
     return(ix,iy,ind)
 end
 
 findindex(gridcells::VoronoiCellsA, x,y) = findindex(gridcells, Point2D(x,y))
 
-function findindex0(gridcells::VoronoiCellsA, p::Point2D)
-    (ix::Int,iy::Int) = find_generator_bin(p,size(gridcells._grid,1))
-    ind::Int = findindexA(gridcells._cells, gridcells._grid[ix,iy], p)
+# TODO: make cleaner use of (x,y)  <--> Point2D(x,y)
+function findindex00(gridcells::VoronoiCellsA, x::Float64, y::Float64)
+    (ix::Int,iy::Int) = find_generator_bin(x,y,size(gridcells._grid,1))
+    ind::Int = findindexA(gridcells._cells, gridcells._grid[ix,iy], Point2D(x,y))
     return(ix,iy,ind)
 end
 
-# Use last index as hint if p is close to p for last call
+# Rounding errors cause point to not be found in a computed grid bin for about 2/3 percent
+# of randomly chosen points. In these cases, we look for the point in the neighboring bins.
+# Test shows that this works for all random points (no misses found in 10^7 or more trials)
+function findindex0(gc::VoronoiCellsA, p::Point2D)
+    (x,y) = (getx(p),gety(p))
+    (ix::Int,iy::Int, ind::Int) = findindex00(gc,x,y)
+    ind != 0 && return (ix,iy,ind)
+    if ix > 1
+        ix0 = ix-1
+        iy0 = iy
+        ind = findindexingrid(gc,ix0,iy0,x,y)
+        ind != 0 && return (ix0,iy0,ind)
+        if iy > 1
+            iy0 = iy-1
+            ind = findindexingrid(gc,ix0,iy0,x,y)
+            ind != 0 && return (ix0,iy0,ind)
+        end
+        if iy < ngrid(gc)
+            iy0 = iy+1
+            ind = findindexingrid(gc,ix0,iy0,x,y)
+            ind != 0 && return (ix0,iy0,ind)
+        end
+    end
+    if ix < ngrid(gc)
+        ix0 = ix+1
+        iy0 = iy
+        ind = findindexingrid(gc,ix0,iy0,x,y)
+        ind != 0 && return (ix0,iy0,ind)
+        if iy > 1
+            iy0 = iy-1
+            ind = findindexingrid(gc,ix0,iy0,x,y)
+            ind != 0 && return (ix0,iy0,ind)
+        end
+        if iy < ngrid(gc)
+            iy0 = iy+1
+            ind = findindexingrid(gc,ix0,iy0,x,y)
+            ind != 0 && return (ix0,iy0,ind)
+        end
+    end
+    if iy > 1
+        iy0 = iy-1
+        ix0 = ix
+        ind = findindexingrid(gc,ix0,iy0,x,y)
+        ind != 0 && return (ix0,iy0,ind)
+    end
+    if iy < ngrid(gc)
+        iy0 = iy+1
+        ix0 = ix
+        ind = findindexingrid(gc,ix0,iy0,x,y)
+        ind != 0 && return (ix0,iy0,ind)
+    end    
+
+    return (ix,iy,ind)
+end
+
+# User gives last returned index as hint if new p is close to p for last call
 function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
     (ix,iy) = find_generator_bin(p,size(gridcells._grid,1))
     invoronoicell(gridcells[ix,iy,hint],p) && return (ix,iy,hint)
-    ind = findindexA(gridcells._cells, gridcells._grid[ix,iy], p)
-    return(ix,iy,ind)
+    findindex0(gridcells,p)
 end
 
 findindex0(gridcells::VoronoiCellsA, x,y) = findindex0(gridcells, Point2D(x,y))
