@@ -334,7 +334,8 @@ function voronoicellsnogrid(t::DelaunayTessellation2D)
     Task(voronoicelliterator)
 end
 
-export cellstogrid, poissontesselation, poissonvoronoicells, ngrid, findindex0
+export cellstogrid, poissontesselation, poissonvoronoicells, poissonvoronoicellsnogrid,
+       ngrid, findindex0
 export slocate, sfindindex0, sfindindex, sarea
 export getareascale, getscale, getshift
 
@@ -579,6 +580,13 @@ function poissonvoronoicells(n::Int)
     gcells = voronoicells(tess)
     standard_scale_and_shift!(gcells,n)
     gcells
+end
+
+# Generate and return single array of all cells. Do not create grid
+# structure. Cannot search efficiently for random points in these cells.
+function poissonvoronoicellsnogrid(n::Int)
+    tess = poissontesselation(n)
+    cells = collect(VoronoiCell,voronoicellsnogrid(tess))
 end
 
 ####
