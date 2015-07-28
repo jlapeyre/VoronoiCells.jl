@@ -117,7 +117,11 @@ end
 invoronoicell(c::VoronoiCell, p::Point2D) = inconvexpolygon(c._verts,p)
 invoronoicell(c::VoronoiCell, x,y) = inconvexpolygon(c._verts,x,y)
 
-# linear search
+# Find the index in an array of cells of the (first) cell containing point p,
+# or zero if no cell contains p.
+# Use linear search. We do not use this function on type VoronoiCellsA below.
+# It is too expensive to search all cells. Searching for one point in each of 10^6
+# cells takes on the order of 1 day cpu time.
 function findindex(cells::Array{VoronoiCell,1}, p::Point2D)
     ifound = 0
     for i in 1:length(cells)
