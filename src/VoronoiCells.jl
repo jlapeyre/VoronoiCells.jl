@@ -144,18 +144,21 @@ function match_other_vertex(v1,v2)
 end
 
 # Find the next DelaunayTriangle triangle when building a VoronoiCell
-# trigs is array of DelaunayTriangles
-# tr is current triangle
-# iv_gen is index (recall (1,2,3) <--> (a,b,c)) of generator point in the triangle tr
+# trigs -- array of DelaunayTriangles
+# tr -- current triangle
+# iv_gen -- index (recall (1,2,3) <--> (a,b,c)) of generator point in the triangle tr
 #  for the cell we are building. Each triangle has the generator as a vertex, but
 #  the index may vary with the triangles.
-# iv_opp is the index of the vertex opposite the side that is shared with the
+# iv_opp -- index of the vertex opposite the side that is shared with the
 #  next triangle.
-# iv_other is the index remaining vertex
+# iv_other -- index of remaining vertex
 # return:
-# tr2 the next triangle in the cell
-# itr2 the index into the array of all DelaunayTriangle's of tr2
-
+# tr2  -- next triangle in the cell
+# itr2  -- index into the array of all DelaunayTriangle's of tr2
+# iv_gen2 -- index (1,2,3) in tr2 of vertex coincident with the generator.
+# iv_opp2 -- index in tr2 of vertex opposite the edge in tr2 shared with
+#  the next-next triangle.
+# iv_other2 -- remaining vertex in tr2
 function next_cell_triangle(trigs,tr,iv_gen::Int,iv_opp::Int, iv_other::Int)
     eps0 = eps(min_coord)
     tr2 = get_neighbor(trigs,tr,iv_opp)
