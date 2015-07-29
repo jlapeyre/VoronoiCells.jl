@@ -5,7 +5,7 @@ using GeometricalPredicates
 import GeometricalPredicates
 import VoronoiDelaunay.isexternal, VoronoiDelaunay.locate, VoronoiDelaunay.findindex
 
-export VoronoiCell, voronoicells, voronoicellsnogrid, voronoicells2, findindex, locate, invoronoicell, area
+export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, voronoicells2, findindex, locate, invoronoicell, area
 export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale
 
 export VoronoiCellIdx, isvalid
@@ -553,7 +553,7 @@ end
 #function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
 function findindex0(gridcells::VoronoiCellsA, hint::Int, x, y)
     (ix,iy) = find_grid_element(x,y,size(gridcells._grid,1))
-    length(gridcells[ix,iy] >= hint) && invoronoicell(gridcells[ix,iy,hint],x,y) && return (ix,iy,hint)
+    length(gridcells[ix,iy]) >= hint && invoronoicell(gridcells[ix,iy,hint],x,y) && return (ix,iy,hint)
     findindex0(gridcells,x,y)
 end
 # function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
@@ -566,8 +566,8 @@ end
 findindex0(gridcells::VoronoiCellsA, p::Point2D) = findindex0(gridcells, getx(p), gety(p))
 #findindex0(gridcells::VoronoiCellsA, hint::Int, x,y) = findindex0(gridcells, hint, Point2D(x,y))
 findindex0(gridcells::VoronoiCellsA, hint, p::Point2D) = findindex0(gridcells, hint, getx(p), gety(p))
-
 findindex(gridcells::VoronoiCellsA, x,y) = VoronoiCellIdx(findindex0(gridcells,x,y)...)
+findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIdx, x,y) = VoronoiCellIdx(findindex0(gridcells,hint._ind, x,y)...)
 
 # Probably don't use this, because we would have to prevent errors first,
 # which is expensive.
@@ -651,6 +651,7 @@ sfindindex0(gcells::VoronoiCellsA, hint, x,y) = findindex0(gcells,hint,iscale(gc
 sfindindex0(gcells::VoronoiCellsA, hint, p::Point2D) = findindex0(gcells, hint, iscale(gcells,p))
 sfindindex(gcells::VoronoiCellsA, x,y) = findindex(gcells,iscale(gcells,x),iscale(gcells,y))
 sfindindex(gcells::VoronoiCellsA, p::Point2D) = findindex(gcells, iscale(gcells,p))
+sfindindex(gridcells::VoronoiCellsA, hint::VoronoiCellIdx, x,y) = findindex(gridcells, hint, iscale(gridcells,x),iscale(gridcells,y))
 sarea(gcells::VoronoiCellsA, i::Int) = area(gcells[i]) * getareascale(gcells)
 sarea(gcells::VoronoiCellsA, i::Int, j::Int, k::Int) = area(gcells[i,j,k]) * getareascale(gcells)
 sarea(gcells::VoronoiCellsA, idx::VoronoiCellIdx) = sarea(gcells, splat(idx)...)
