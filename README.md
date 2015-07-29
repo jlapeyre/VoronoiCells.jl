@@ -7,6 +7,8 @@ This the first version, with a rather sprawling interface that should not be
 considered stable. Following is a brief description of some of the
 most recent, high-level interface.
 
+### Some functions
+
 ```julia
 cells = poissonvoronoicells(npts)
 ```
@@ -36,6 +38,8 @@ Return `true` if a cell was found containing `(x,y)`, otherwise `false`.
 c = cells[idx], sarea(cells,idx), nedges(c), nverts(c)
 ```
 Scaled area of cell at index `idx`. Number of edges and number of vertices in the cell.
+
+### Example
 
 Here is sample code that inefficiently measures the second moment of the cell area
 distribution by doing a random walk and recording the area of the containing cell
