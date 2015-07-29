@@ -1,6 +1,7 @@
 using VoronoiDelaunay
 using VoronoiCells
 
+# Routines for printing points, edges, triangles, and cells to text files for plotting
 # Much of this may not work anymore
 
 # I think getx,gety not implemented for abstract Points
