@@ -370,7 +370,10 @@ immutable VoronoiCellIdx
 end
 
 Base.isvalid(iv::VoronoiCellIdx) = iv._ind != 0
-==(iv1::VoronoiCellIdx, iv2::VoronoiCellIdx) = iv1._ix == iv2._ix && iv1._iy == iv2._iy && iv1._ind == iv2._ind
+splat(iv::VoronoiCellIdx) = (iv._ix,iv._iy,iv._ind)
+==(iv1::VoronoiCellIdx, iv2::VoronoiCellIdx) = splat(iv1) == splat(iv2)
+# ==(iv1::VoronoiCellIdx, iv2::VoronoiCellIdx) = iv1._ix == iv2._ix && iv1._iy == iv2._iy && iv1._ind == iv2._ind
+
 
 getareascale(gcells::VoronoiCellsA) = gcells._areascale
 getscale(gcells::VoronoiCellsA) = gcells._scale
@@ -379,10 +382,12 @@ getshift(gcells::VoronoiCellsA) = gcells._shift
 getindex(c::VoronoiCellsA, i::Int) = c._cells[i]
 getindex(c::VoronoiCellsA, i::Int, j::Int) = c._grid[i,j]
 getindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._cells[c._grid[i,j][k]]
-getindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getindex(c,iv._ix, iv._iy, iv._ind)
+getindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getindex(c,splat(iv)...)
+#getindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getindex(c,iv._ix, iv._iy, iv._ind)
 # return integer index into big 1d array of all cells
 getcellindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._grid[i,j][k]
-getcellindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getcellindex(c, iv._ix, iv._iy, iv._ind)
+getcellindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getcellindex(c, splat(iv)...)
+#getcellindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getcellindex(c, iv._ix, iv._iy, iv._ind)
 Base.length(c::VoronoiCellsA) = length(c._cells)
 ngrid(c::VoronoiCellsA) = c._ngrid
 
@@ -648,7 +653,8 @@ sfindindex(gcells::VoronoiCellsA, x,y) = findindex(gcells,iscale(gcells,x),iscal
 sfindindex(gcells::VoronoiCellsA, p::Point2D) = findindex(gcells, iscale(gcells,p))
 sarea(gcells::VoronoiCellsA, i::Int) = area(gcells[i]) * getareascale(gcells)
 sarea(gcells::VoronoiCellsA, i::Int, j::Int, k::Int) = area(gcells[i,j,k]) * getareascale(gcells)
-sarea(gcells::VoronoiCellsA, idx::VoronoiCellIdx) = sarea(gcells, idx._ix, idx._iy, idx._ind)
+sarea(gcells::VoronoiCellsA, idx::VoronoiCellIdx) = sarea(gcells, splat(idx)...)
+#sarea(gcells::VoronoiCellsA, idx::VoronoiCellIdx) = sarea(gcells, idx._ix, idx._iy, idx._ind)
 smaxcoord(gcells) = scale(gcells,max_coord)
 smincoord(gcells) = scale(gcells,min_coord)
 sgetgenerator(gcells::VoronoiCellsA, c::VoronoiCell) = scale(gcells,c._generator)
