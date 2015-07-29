@@ -24,7 +24,7 @@ the average cell size is (approximately) `1` and the origin is at the center of 
 ```julia
 idx = sfindindex(cells,x,y)
 ```
-Return the index of the cell containing the scaled point `(x,y)`.
+Search efficiently for and return the index of the cell containing the scaled point `(x,y)`.
 The cell is retrieved via `cells[idx]`.
 
 ```julia
