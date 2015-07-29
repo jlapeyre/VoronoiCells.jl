@@ -67,7 +67,7 @@ function walkmean()
         sumarea += sarea(cells,idx)  # add (scaled) area of cell
         nareas += 1
     end
-    @printf("mean area %.4f,  nareas %d\n", sumarea/nareas,  nareas)
+    @printf("mean sampled area %.4f,  nareas %d\n", sumarea/nareas,  nareas)
 end
 ```
 
