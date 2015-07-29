@@ -1,5 +1,6 @@
 using VoronoiCells
 using Base.Test
+using GeometricalPredicates
 
 @test (cells = poissonvoronoicells(10^4) ; true)
 
@@ -16,3 +17,24 @@ function testrand(cells,n)
 end
 
 @test testrand(poissonvoronoicells(10^5),10^5) == (0,0.0)
+
+# Test mean area of cells in the bulk
+function meanarea(cells::Array{VoronoiCell,1}, cutoff)
+    ma = 0.0
+    cnt = 0
+    lc = 1 + cutoff
+    hc = 2 - cutoff
+    for i in 1:length(cells)
+        c = cells[i]
+        g = getgenerator(c)
+        getx(g) < lc && continue
+        getx(g) > hc && continue
+        gety(g) < lc && continue
+        gety(g) > hc && continue
+        cnt += 1
+        ma += VoronoiCells.area(cells[i])
+    end
+    ma / cnt
+end
+
+@test abs(meanarea(poissonvoronoicells(10^5)._cells,.1) / 1e-5 -1) < 1e-2
