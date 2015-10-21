@@ -39,6 +39,18 @@ c = cells[idx], sarea(cells,idx), nedges(c), nverts(c)
 ```
 Scaled area of cell at index `idx`. Number of edges and number of vertices in the cell.
 
+```julia
+cells = poissonvoronoicells(npts)
+write("fname.dat", cells)
+```
+Write cells to a file. The file is in a fast binary format. It does not
+use any generic serialization.
+
+```julia
+cells = read_one_cellfile("fname.dat")
+```
+Read cells from file written by `write`.
+
 ### Example
 
 Here is sample code that inefficiently measures the second moment of the cell area
