@@ -4,8 +4,9 @@ using VoronoiDelaunay
 using GeometricalPredicates
 import GeometricalPredicates
 import VoronoiDelaunay.isexternal, VoronoiDelaunay.locate, VoronoiDelaunay.findindex
+import Base: getindex, ==, -
 
-export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, voronoicells2, findindex, locate, invoronoicell, area
+export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, voronoicells2, findindex, locate, invoronoicell, area, avoronoicellsnogrid
 export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale
 
 export VoronoiCellIdx, isvalid
@@ -338,6 +339,41 @@ function voronoicellsnogrid(t::DelaunayTessellation2D)
     end
     Task(voronoicelliterator)
 end
+
+function avoronoicellsnogrid(t::DelaunayTessellation2D)
+    visited = zeros(Bool, t._last_trig_index)
+    visited[1] = true
+    cells = Array(VoronoiCell,0)
+    j = 0
+    for ix in 2:t._last_trig_index
+	visited[ix] && continue
+	const tr = t._trigs[ix]
+	visited[ix] = true            
+        isexternal(tr) && continue
+        for iv_gen in 1:3
+
+            iv_opp = mod1(iv_gen+1,3) # pick one of the other two vertices
+            ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
+            visited[ix2] && continue
+            #                isexternal(t._trigs[ix2]) && continue
+            
+            iv_opp = mod1(iv_gen+2,3) # pick the remaining vertex
+            ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
+            visited[ix2] && continue
+            
+            #                isexternal(t._trigs[ix2]) && continue
+            
+            (is_visited, cell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
+            is_visited && continue
+            j += 1
+            #                j > 10000 && return
+            isexternal(cell) && continue # just checking each triangle does not seem to work.
+            push!(cells,cell)
+        end
+    end
+    cells
+end
+
 
 export cellstogrid, poissontesselation, poissonvoronoicells, poissonvoronoicellsnogrid,
        ngrid, findindex0
