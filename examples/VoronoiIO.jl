@@ -27,7 +27,7 @@ end
 function print_delaunay_edges(fname::String, t::DelaunayTessellation2D)
     str = open(fname,"w")
     print_delaunay_edges(str, t)
-    close(str)    
+    close(str)
 end
 
 # Print all edges in voronoi cell, one point per line, for plotting
@@ -78,7 +78,7 @@ end
 
 function print_match_point(tr::VoronoiDelaunay.DelaunayTriangle, p0::Point2D)
     eps0 = eps(min_coord) # same as for max_coord
-    has_vertex_f = false    
+    has_vertex_f = false
     pa = geta(tr)
     if distanceL1(pa,p0) <= eps0
         println(" a ")

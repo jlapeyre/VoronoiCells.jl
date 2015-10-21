@@ -7,4 +7,3 @@ function printpoissonvoronoicells(fname,n)
     print_cells(fname,cells)
     cells
 end
-

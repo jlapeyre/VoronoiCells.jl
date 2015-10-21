@@ -42,7 +42,7 @@ function inconvexpolygon(poly::Array{Point2D,1}, x,y)
     s = lineside(getx(p1),gety(p1),getx(p2),gety(p2),x,y)
     for i in 1:length(poly)-1
         p1 = poly[i]
-        p2 = poly[i+1]    
+        p2 = poly[i+1]
         s1 = lineside(getx(p1),gety(p1),getx(p2),gety(p2),x,y)
         if sign(s1) != sign(s)
             is_inconvexpolygon = false
@@ -140,7 +140,7 @@ function match_other_vertex(v1,v2)
             return 2
         else
             return 1
-        end        
+        end
     else
         error("Can't find other vertex: v1=$v1 v2=$v2")
     end
@@ -187,7 +187,7 @@ VoronoiCell(generator) = VoronoiCell(generator, Array(Point2D, 0))
 nverts(c::VoronoiCell) = length(c._verts)
 nedges(c::VoronoiCell) = length(c._verts) + 1
 getgenerator(c::VoronoiCell) = c._generator
-             
+
 # Area of irregular polygon. Don't make use of convex property.
 function area(c::VoronoiCell)
     vs = c._verts
@@ -215,7 +215,7 @@ function isexternal(c::VoronoiCell)
         if yc < min_coord || yc > max_coord
             found_external = true
             break
-        end        
+        end
     end
     found_external
 end
@@ -253,7 +253,7 @@ function find_cell(trigs,tr, iv_gen, iv_opp, visited)
     while true
         (tr2, itr2, iv_gen, iv_opp, iv_other) = next_cell_triangle(trigs, tr, iv_gen, iv_opp, iv_other)
 #        if (visited[itr2] || isexternal(tr2)) && tr2 != tr0
-        if visited[itr2] && tr2 != tr0            
+        if visited[itr2] && tr2 != tr0
             is_visited = true
             break
         end
@@ -276,7 +276,7 @@ end
 # 	for ix in 2:t._last_trig_index
 # 	    visited[ix] && continue
 # 	    const tr = t._trigs[ix]
-# 	    visited[ix] = true            
+# 	    visited[ix] = true
 #             isexternal(tr) && continue
 #             for iv_gen in 1:3
 
@@ -313,7 +313,7 @@ function voronoicellsnogrid(t::DelaunayTessellation2D)
 	for ix in 2:t._last_trig_index
 	    visited[ix] && continue
 	    const tr = t._trigs[ix]
-	    visited[ix] = true            
+	    visited[ix] = true
             isexternal(tr) && continue
             for iv_gen in 1:3
 
@@ -348,7 +348,7 @@ function avoronoicellsnogrid(t::DelaunayTessellation2D)
     for ix in 2:t._last_trig_index
 	visited[ix] && continue
 	const tr = t._trigs[ix]
-	visited[ix] = true            
+	visited[ix] = true
         isexternal(tr) && continue
         for iv_gen in 1:3
 
@@ -356,13 +356,13 @@ function avoronoicellsnogrid(t::DelaunayTessellation2D)
             ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
             visited[ix2] && continue
             #                isexternal(t._trigs[ix2]) && continue
-            
+
             iv_opp = mod1(iv_gen+2,3) # pick the remaining vertex
             ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
             visited[ix2] && continue
-            
+
             #                isexternal(t._trigs[ix2]) && continue
-            
+
             (is_visited, cell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
             is_visited && continue
             j += 1
@@ -487,7 +487,7 @@ end
 # generate as above, but choose a good default number of elements in the grid based on the
 # number of cells (good if they are uniformly distributed)
 function voronoicells(t::DelaunayTessellation2D)
-    cells = collect(VoronoiCell,voronoicellsnogrid(t))    
+    cells = collect(VoronoiCell,voronoicellsnogrid(t))
     ngrid = round(Int,sqrt(length(cells))/10)
     cellstogrid(cells, ngrid)
 end
@@ -579,7 +579,7 @@ function findindex0(grc::VoronoiCellsA, x, y)
         ix0 = ix
         ind = findindexingrid(grc,ix0,iy0,x,y)
         ind != 0 && return (ix0,iy0,ind)
-    end    
+    end
     return (ix,iy,ind)
 end
 
@@ -647,7 +647,7 @@ function poissonvoronoicells(n::Int,ngrid::Int)
     tess = poissontesselation(n)
     gcells = voronoicells(tess,ngrid)
     standard_scale_and_shift!(gcells,n)
-    gcells    
+    gcells
 end
 
 # Same as above, but calculate standard grid sized from number of cells

@@ -80,7 +80,7 @@ end
 function Base.write(fn::String, cells::Array{VoronoiCell,1})
     samples = PoissonCellSamples(Array(Array{VoronoiCell,1},0))
     push!(samples._data,cells)
-#    write_cells(fn,samples) 
+#    write_cells(fn,samples)
     write(fn,samples)
 end
 
@@ -88,7 +88,7 @@ function Base.write(fn::String, gcells::VoronoiCellsA)
     strm = open(fn, "w")
     write(strm,gcells)
     close(strm)
-end    
+end
 
 function read_n_cell_samples(strm::IOStream)
     buf = zeros(Int,1)
