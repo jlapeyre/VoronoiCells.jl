@@ -14,7 +14,7 @@ end
 Base.length(samples::PoissonCellSamples) = length(samples._data)
 Base.getindex(samples::PoissonCellSamples, i) = samples._data[i]
 
-function Base.write(fn::String, samples::PoissonCellSamples)
+function Base.write(fn::AbstractString, samples::PoissonCellSamples)
     strm = open(fn, "w")
     nsamp = length(samples)
 #    write(strm,nsamp)
@@ -77,14 +77,14 @@ function read_cell_grid(strm::IOStream)
 end
 
 
-function Base.write(fn::String, cells::Array{VoronoiCell,1})
+function Base.write(fn::AbstractString, cells::Array{VoronoiCell,1})
     samples = PoissonCellSamples(Array(Array{VoronoiCell,1},0))
     push!(samples._data,cells)
 #    write_cells(fn,samples)
     write(fn,samples)
 end
 
-function Base.write(fn::String, gcells::VoronoiCellsA)
+function Base.write(fn::AbstractString, gcells::VoronoiCellsA)
     strm = open(fn, "w")
     write(strm,gcells)
     close(strm)
@@ -137,7 +137,7 @@ function read_cells_top(strm::IOStream)
     end
 end
 
-function read_one_cellfile(fn::String)
+function read_one_cellfile(fn::AbstractString)
     strm = open(fn,"r")
 #    nsamps = read_n_cell_samples(strm)
 #    println("n samples ", nsamps)
