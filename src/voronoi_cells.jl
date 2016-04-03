@@ -9,7 +9,7 @@ import Base: getindex, ==, -
 export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, voronoicells2, findindex, locate, invoronoicell, area, avoronoicellsnogrid
 export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale
 
-export VoronoiCellIdx, isvalid
+export VoronoiCellIdx, isvalid, getinvalidcellindex
 
 const min_coord = GeometricalPredicates.min_coord + eps(Float64)
 const max_coord = GeometricalPredicates.max_coord - eps(Float64)
@@ -400,16 +400,17 @@ end
 
 # index into grid and array structure VoronoiCellsA
 immutable VoronoiCellIdx
-    _ix
-    _iy
-    _ind
+    _ix::Int
+    _iy::Int
+    _ind::Int
 end
+
 
 Base.isvalid(iv::VoronoiCellIdx) = iv._ind != 0
 splat(iv::VoronoiCellIdx) = (iv._ix,iv._iy,iv._ind)
 ==(iv1::VoronoiCellIdx, iv2::VoronoiCellIdx) = splat(iv1) == splat(iv2)
 # ==(iv1::VoronoiCellIdx, iv2::VoronoiCellIdx) = iv1._ix == iv2._ix && iv1._iy == iv2._iy && iv1._ind == iv2._ind
-
+getinvalidcellindex() = VoronoiCellIdx(0,0,0)
 
 getareascale(gcells::VoronoiCellsA) = gcells._areascale
 getscale(gcells::VoronoiCellsA) = gcells._scale
