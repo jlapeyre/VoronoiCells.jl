@@ -175,7 +175,7 @@ end
 # _generator is one of the points in the point process. There is exactly one such point in each
 # cell.
 type VoronoiCell
-    _generator
+    _generator::Point2D
     _verts::Array{Point2D,1}
     # neigbhors ?
 end
@@ -243,10 +243,10 @@ locate(cells::Array{VoronoiCell,1}, p::Point2D) = cells[findindex(cells,p)]
 
 
 function find_cell(trigs,tr, iv_gen, iv_opp, visited)
-    cell = VoronoiCell(get_vertex(tr, iv_gen))
+    cell::VoronoiCell = VoronoiCell(get_vertex(tr, iv_gen))
     iv_other = match_other_vertex(iv_gen,iv_opp)
     tr0 = tr
-    is_visited = false
+    is_visited::Bool = false
     while true
         (tr2, itr2, iv_gen, iv_opp, iv_other) = next_cell_triangle(trigs, tr, iv_gen, iv_opp, iv_other)
 #        if (visited[itr2] || isexternal(tr2)) && tr2 != tr0
@@ -325,7 +325,7 @@ function voronoicellsnogrid(t::DelaunayTessellation2D)
 
                 #                isexternal(t._trigs[ix2]) && continue
 
-                (is_visited, cell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
+                (is_visited, cell::VoronoiCell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
                 is_visited && continue
                 j += 1
 #                j > 10000 && return
@@ -481,10 +481,24 @@ function voronoicells(t::DelaunayTessellation2D, ngrid::Int)
     cellstogrid(cells, ngrid)
 end
 
+
 # generate as above, but choose a good default number of elements in the grid based on the
 # number of cells (good if they are uniformly distributed)
+# function voronoicells(t::DelaunayTessellation2D)
+#     cells = collect(VoronoiCell,voronoicellsnogrid(t))
+#     ngrid = round(Int,sqrt(length(cells))/10)
+#     cellstogrid(cells, ngrid)
+# end
+
+# Version 0.5.0-dev+3385 (2016-04-02 23:53 UTC) throws an error when
+# trying to use 'collect' as in commented out code above. So
+# we make an explicit loop to create the cell files.
 function voronoicells(t::DelaunayTessellation2D)
-    cells = collect(VoronoiCell,voronoicellsnogrid(t))
+    celltask = voronoicellsnogrid(t)
+    cells = Array(VoronoiCell,0)
+    for cell in celltask
+        push!(cells, cell)
+    end
     ngrid = round(Int,sqrt(length(cells))/10)
     cellstogrid(cells, ngrid)
 end
