@@ -4,6 +4,11 @@ using GeometricalPredicates
 
 @test (cells = poissonvoronoicells(10^4) ; true)
 
+cells = poissonvoronoicells(10^2)
+
+@test typeof(sarea(cells,1)) == Float64
+@test typeof(area(cells[1])) == Float64
+
 # Test that any point in the bulk is covered by a cell.
 function testrand(cells,n)
     c = 0
@@ -38,3 +43,4 @@ function meanarea(cells::Array{VoronoiCell,1}, cutoff)
 end
 
 @test abs(meanarea(poissonvoronoicells(10^5)._cells,.1) / 1e-5 -1) < 1e-2
+

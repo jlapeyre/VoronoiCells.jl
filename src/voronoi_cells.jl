@@ -3,6 +3,7 @@
 using VoronoiDelaunay
 using GeometricalPredicates
 import GeometricalPredicates
+import GeometricalPredicates: area  # needed so that area() can be called in runtests.jl
 import VoronoiDelaunay.isexternal, VoronoiDelaunay.locate, VoronoiDelaunay.findindex
 import Base: getindex, ==, -
 
@@ -17,14 +18,10 @@ const max_coord = GeometricalPredicates.max_coord - eps(Float64)
 #### Some functions that only operate on GeometricalPredicates
 
 # Euclidean distance
-function distance(p1::Point2D,p2::Point2D)
-    (getx(p2)-getx(p1))^2 + (gety(p2)-gety(p1))^2
-end
+distance(p1::Point2D,p2::Point2D) = (getx(p2)-getx(p1))^2 + (gety(p2)-gety(p1))^2
 
 # Maybe faster than Euclidean, and is sufficient for use below
-function distanceL1(p1::Point2D,p2::Point2D)
-    abs(getx(p2)-getx(p1)) + abs(gety(p2)-gety(p1))
-end
+distanceL1(p1::Point2D,p2::Point2D) = abs(getx(p2)-getx(p1)) + abs(gety(p2)-gety(p1))
 
 # Removed use of this. Maybe remove this, as well
 -(p1::Point2D,p2::Point2D) = Point2D(getx(p1)-getx(p2),gety(p1)-gety(p2))
@@ -373,7 +370,6 @@ function avoronoicellsnogrid(t::DelaunayTessellation2D)
     end
     cells
 end
-
 
 export cellstogrid, poissontesselation, poissonvoronoicells, poissonvoronoicellsnogrid,
        ngrid, findindex0
