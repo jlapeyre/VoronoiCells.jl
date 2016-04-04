@@ -101,10 +101,8 @@ function read_cells(strm::IOStream)
     read!(strm,buf)
     ncells = buf[1]
     cells = Array(VoronoiCell,0)
+    dbuf = zeros(Float64,1)
     for i in 1:ncells
-        buf = zeros(Int,1)
-        dbuf = zeros(Float64,1)
-
         read!(strm,dbuf)
         gx = dbuf[1]
         read!(strm,dbuf)
