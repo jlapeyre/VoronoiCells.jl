@@ -30,14 +30,14 @@ function Base.write(strm::IOStream,cells::Array{VoronoiCell,1})
     write(strm,CELLARRAY)
     write(strm,ncells)
     for i in 1:ncells
-        cell = cells[i]
+        cell::VoronoiCell = cells[i]
         gx = getx(cell._generator)
         gy = gety(cell._generator)
         write(strm,gx)
         write(strm,gy)
         nverts = length(cell._verts)
         write(strm,nverts)
-        for j in 1:nverts
+        @inbounds for j in 1:nverts
             vert = cell._verts[j]
             vx = getx(vert)
             vy = gety(vert)
