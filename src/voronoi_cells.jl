@@ -437,7 +437,7 @@ function make_grid_array(ngrid::Int)
     gridcells = Array(Array{Int,1},ngrid,ngrid)
     for i in 1:ngrid
         for j in 1:ngrid
-            gridcells[i,j] = Array(Int,0)
+        @inbounds gridcells[i,j] = Array(Int,0)
         end
     end
     gridcells
@@ -450,8 +450,8 @@ end
 # This probably throws away carefully preserved precision.
 # Should we use width of area rather than 1.0 ?
 function find_grid_element(x::Float64, y::Float64, ngrid::Int)
-    ix = round(Int64, (x - 1.0) * ngrid) + 1
-    iy = round(Int64, (y - 1.0) * ngrid) + 1
+    ix::Int = round(Int64, (x - 1.0) * ngrid) + 1
+    iy::Int = round(Int64, (y - 1.0) * ngrid) + 1
     ix > ngrid ? ix = ngrid : nothing
     iy > ngrid ? iy = ngrid : nothing
     ix < 1 ? ix = 1 : nothing
@@ -470,7 +470,7 @@ function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int)
     n::Int = length(cells)
     for i in 1:n
       @inbounds  cell = cells[i]
-        (ix,iy) = find_grid_element(cell,ngrid)
+        (ix::Int,iy::Int) = find_grid_element(cell,ngrid)
         push!(gridcells[ix,iy], i)
     end
     gshift::Float64 = 1.5
@@ -547,7 +547,7 @@ end
 # Test shows that this works for all random points (no misses found in 10^7 or more trials)
 # Each case below occurs in 10^6 trials.
 #function findindex0(grc::VoronoiCellsA, p::Point2D)
-function findindex0(grc::VoronoiCellsA, x, y)
+function findindex0(grc::VoronoiCellsA, x::Float64, y::Float64)
 #    (x,y) = (getx(p),gety(p))
     (ix::Int,iy::Int, ind::Int) = findindex00(grc,x,y)
     ind != 0 && return (ix,iy,ind)
@@ -602,8 +602,8 @@ end
 # i.e. assume we are in the same cell. We also assume that the same indices
 # ix,iy will be computed. If hint is wrong, we do the usual search.
 #function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
-function findindex0(gridcells::VoronoiCellsA, hint::Int, x, y)
-    (ix,iy) = find_grid_element(x,y,size(gridcells._grid,1))
+function findindex0(gridcells::VoronoiCellsA, hint::Int, x::Float64, y::Float64)
+    (ix::Int,iy::Int) = find_grid_element(x,y,size(gridcells._grid,1))
     length(gridcells[ix,iy]) >= hint && invoronoicell(gridcells[ix,iy,hint],x,y) && return (ix,iy,hint)
     findindex0(gridcells,x,y)
 end
@@ -685,12 +685,12 @@ end
 # !!!! DON'T USE THIS! We made VoronoiCellsA immutable
 # For Poisson point process, origin is at zero zero and average cell
 # size is 1.
-function standard_scale_and_shift!(gcells::VoronoiCellsA, n::Int)
-    gcells._shift = 1.5
-    gcells._scale = sqrt(n)
-    gcells._areascale = convert(Float64,n)
-    nothing
-end
+# function standard_scale_and_shift!(gcells::VoronoiCellsA, n::Int)
+#     gcells._shift = 1.5
+#     gcells._scale = sqrt(n)
+#     gcells._areascale = convert(Float64,n)
+#     nothing
+# end
 
 # Scaled versions of some functions. The tesselated region, approximately
 # 1.0 <= x,y, 2.0  is scaled and shifted to coordinates convenient for the
