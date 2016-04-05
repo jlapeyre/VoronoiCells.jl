@@ -37,10 +37,10 @@ function inconvexpolygon(poly::Array{Point2D,1}, x,y)
     p1 = poly[n]
     p2 = poly[1]
     s = lineside(getx(p1),gety(p1),getx(p2),gety(p2),x,y)
-    for i in 1:length(poly)-1
+    @inbounds for i in 1:length(poly)-1
         p1 = poly[i]
         p2 = poly[i+1]
-        s1 = lineside(getx(p1),gety(p1),getx(p2),gety(p2),x,y)
+        s1::Float64 = lineside(getx(p1),gety(p1),getx(p2),gety(p2),x,y)
         if sign(s1) != sign(s)
             is_inconvexpolygon = false
             break
@@ -69,7 +69,7 @@ end
 # Note regarding DelaunayTriangle:
 # tr._neighbour_a is the neighboring triangle sharing the edge in tr that is opposite point a
 # tr._neighbour_b, tr._neighbour_c contain the vertex a, while tr._neighbour_a does not.
-function get_neighbor(trigs,trig,iv)
+function get_neighbor(trigs,trig,iv::Int)
     if iv == 1
         trigs[trig._neighbour_a]
     elseif iv == 2
@@ -83,7 +83,7 @@ end
 
 # Same as above, but return index of triangle in array of Delaunay triangles,
 # rather than the triangle itself
-function get_neighbor_index(trigs,trig,iv)
+function get_neighbor_index(trigs,trig,iv::Int)
     if iv == 1
         trig._neighbour_a
     elseif iv == 2
@@ -132,7 +132,7 @@ function match_other_vertex(v1,v2)
         else
             return 1
         end
-    elseif v1 == 3
+    elseif v1 == 3    # wastes time, but safer
         if v2 == 1
             return 2
         else
@@ -159,7 +159,7 @@ end
 # iv_opp2 -- index in tr2 of vertex opposite the edge in tr2 shared with
 #  the next-next triangle.
 # iv_other2 -- remaining vertex in tr2
-function next_cell_triangle(trigs,tr,iv_gen::Int,iv_opp::Int, iv_other::Int)
+@inline function next_cell_triangle(trigs,tr,iv_gen::Int,iv_opp::Int, iv_other::Int)
     eps0 = eps(min_coord)
     tr2 = get_neighbor(trigs,tr,iv_opp)
     itr2 = get_neighbor_index(trigs,tr,iv_opp)
@@ -174,7 +174,7 @@ end
 # 2D
 # _generator is one of the points in the point process. There is exactly one such point in each
 # cell.
-type VoronoiCell
+immutable VoronoiCell
     _generator::Point2D
     _verts::Array{Point2D,1}
     # neigbhors ?
@@ -385,7 +385,7 @@ export getareascale, getscale, getshift
 # _cells -- linear array of all cells (currently in (almost) no order)
 # _grid -- 2d array of arrays of indices into _cells.
 # _scale, _shift, _areascale. For convenience of user. See scaled versions of functions below.
-type VoronoiCellsA
+immutable VoronoiCellsA
     _ngrid::Int
     _cells::Array{VoronoiCell,1}
     _grid::Array{Array{Int,1},2}
@@ -467,12 +467,16 @@ find_grid_element(cell::VoronoiCell, ngrid::Int) = find_grid_element(cell._gener
 # Cells are assigned to the grid element the generator of the cell is in.
 function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int)
     gridcells = make_grid_array(ngrid)
-    for i in 1:length(cells)
-        cell = cells[i]
+    n::Int = length(cells)
+    for i in 1:n
+      @inbounds  cell = cells[i]
         (ix,iy) = find_grid_element(cell,ngrid)
         push!(gridcells[ix,iy], i)
     end
-    VoronoiCellsA(ngrid,cells,gridcells,1.0,0.0,1.0)
+    gshift::Float64 = 1.5
+    gscale::Float64 = sqrt(n)
+    gareascale::Float64 = convert(Float64,n)
+    VoronoiCellsA(ngrid,cells,gridcells,gshift, gscale, gareascale)
 end
 
 # generate big array of cells from tesselation and store them in grid structure
@@ -657,7 +661,7 @@ end
 function poissonvoronoicells(n::Int,ngrid::Int)
     tess = poissontesselation(n)
     gcells = voronoicells(tess,ngrid)
-    standard_scale_and_shift!(gcells,n)
+#    standard_scale_and_shift!(gcells,n)  # disable so that VoronoiCellsA can be immutable
     gcells
 end
 
@@ -665,7 +669,7 @@ end
 function poissonvoronoicells(n::Int)
     tess = poissontesselation(n)
     gcells = voronoicells(tess)
-    standard_scale_and_shift!(gcells,n)
+#    standard_scale_and_shift!(gcells,n)
     gcells
 end
 
@@ -678,6 +682,7 @@ end
 
 ####
 
+# !!!! DON'T USE THIS! We made VoronoiCellsA immutable
 # For Poisson point process, origin is at zero zero and average cell
 # size is 1.
 function standard_scale_and_shift!(gcells::VoronoiCellsA, n::Int)
