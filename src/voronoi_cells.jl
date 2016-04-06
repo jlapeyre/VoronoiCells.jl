@@ -675,9 +675,15 @@ end
 
 # Generate and return single array of all cells. Do not create grid
 # structure. Cannot search efficiently for random points in these cells.
+# See below about not using 'collect'
 function poissonvoronoicellsnogrid(n::Int)
     tess = poissontesselation(n)
-    cells = collect(VoronoiCell,voronoicellsnogrid(tess))
+    celltask = voronoicellsnogrid(tess)
+    cells = Array(VoronoiCell,0)
+    for cell in celltask
+        push!(cells, cell)
+    end    
+    cells
 end
 
 ####
