@@ -476,7 +476,7 @@ function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int)
     gshift::Float64 = 1.5
     gscale::Float64 = sqrt(n)
     gareascale::Float64 = convert(Float64,n)
-    VoronoiCellsA(ngrid,cells,gridcells,gshift, gscale, gareascale)
+    VoronoiCellsA(ngrid,cells,gridcells, gscale, gshift, gareascale)
 end
 
 # generate big array of cells from tesselation and store them in grid structure
