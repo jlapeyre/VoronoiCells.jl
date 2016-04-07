@@ -17,6 +17,12 @@ Return the Voronoi cells. Only complete cells within a square area are returned.
 The cells very near the boundary do not have the same geometrical statistics
 as those in the bulk.
 
+Lookup of the cell containing a point is done via a square grid. By default, about
+100 generator points are put in each square. `cells = poissonvoronoicells(npts,ndiv)`,
+will put about `ndiv^2` generator points in each square, at the cost of a higher storage
+requirement with increasing `ndiv`.
+
+
 ```julia
 smaxcoord(cells), smincoord(cells)
 ```
@@ -27,7 +33,7 @@ the average cell size is (approximately) `1` and the origin is at the center of 
 idx = sfindindex(cells,x,y)
 ```
 Search efficiently for and return the index of the cell containing the scaled point `(x,y)`.
-The cell is retrieved via `cells[idx]`.
+The cell may then be retrieved via `cells[idx]`.
 
 ```julia
 isvalid(idx)

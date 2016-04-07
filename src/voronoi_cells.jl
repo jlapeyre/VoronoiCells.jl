@@ -490,12 +490,12 @@ function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int, gscale, gshift, ga
     VoronoiCellsA(ngrid,cells,gridcells, gscale, gshift, gareascale)    
 end
 
-# generate big array of cells from tesselation and store them in grid structure
-function voronoicells(t::DelaunayTessellation2D, ngrid::Int)
-    cells = collect(VoronoiCell,voronoicellsnogrid(t))
-    cellstogrid(cells, ngrid)
-end
-
+# disabled this. would fails anyway
+# # generate big array of cells from tesselation and store them in grid structure
+# function voronoicells(t::DelaunayTessellation2D, ngrid::Int)
+#     cells = collect(VoronoiCell,voronoicellsnogrid(t))
+#     cellstogrid(cells, ngrid)
+# end
 
 # generate as above, but choose a good default number of elements in the grid based on the
 # number of cells (good if they are uniformly distributed)
@@ -508,7 +508,7 @@ end
 # Version 0.5.0-dev+3385 (2016-04-02 23:53 UTC) throws an error when
 # trying to use 'collect' as in commented out code above. So
 # we make an explicit loop to create the cell files.
-function voronoicells(t::DelaunayTessellation2D, ndiv::Int)
+function voronoicells(t::DelaunayTessellation2D, ndiv)
     celltask = voronoicellsnogrid(t)
     cells = Array(VoronoiCell,0)
     for cell in celltask
@@ -519,7 +519,7 @@ function voronoicells(t::DelaunayTessellation2D, ndiv::Int)
 end
 
 function voronoicells(t::DelaunayTessellation2D)
-    voronoicells(t,10) # ndiv defaults to 10
+     voronoicells(t,10) # ndiv defaults to 10
 end
 
 
@@ -674,9 +674,10 @@ end
 
 # Create tesselation of poisson point process sample.
 # Return only the efficient cell structure.
-function poissonvoronoicells(n::Int,ngrid::Int)
+# ndiv^2 is the average number of generator points per square in the grid
+function poissonvoronoicells(n::Int, ndiv)
     tess = poissontesselation(n)
-    gcells = voronoicells(tess,ngrid)
+    gcells = voronoicells(tess,ndiv)
 #    standard_scale_and_shift!(gcells,n)  # disable so that VoronoiCellsA can be immutable
     gcells
 end
@@ -750,5 +751,15 @@ function sizeof(cells::VoronoiCellsA)
     s1 + s2 + s3
 end
 
+#####
+
+# This should be about ndiv^2.
+function mean_num_points_per_grid_square(cells::VoronoiCellsA)
+    sum::Int = 0
+    for i in 1:length(cells._grid)
+        sum += length(cells._grid[i])
+    end
+    sum / length(cells._grid)
+end
 
 #end # module
