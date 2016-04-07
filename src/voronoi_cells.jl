@@ -462,10 +462,7 @@ end
 find_grid_element(p::Point2D, ngrid::Int) = find_grid_element(getx(p),gety(p),ngrid)
 find_grid_element(cell::VoronoiCell, ngrid::Int) = find_grid_element(cell._generator, ngrid)
 
-# Assign indices of cells in big linear array to arrays in each
-# grid element and return new object.
-# Cells are assigned to the grid element the generator of the cell is in.
-function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int)
+function make_grid_cells(cells::Array{VoronoiCell,1}, ngrid::Int)
     gridcells = make_grid_array(ngrid)
     n::Int = length(cells)
     for i in 1:n
@@ -473,10 +470,24 @@ function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int)
         (ix::Int,iy::Int) = find_grid_element(cell,ngrid)
         push!(gridcells[ix,iy], i)
     end
+    gridcells
+end
+
+# Assign indices of cells in big linear array to arrays in each
+# grid element and return new object.
+# Cells are assigned to the grid element the generator of the cell is in.
+function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int)
+    gridcells = make_grid_cells(cells,ngrid)
+    n = length(cells)
     gshift::Float64 = 1.5
     gscale::Float64 = sqrt(n)
     gareascale::Float64 = convert(Float64,n)
     VoronoiCellsA(ngrid,cells,gridcells, gscale, gshift, gareascale)
+end
+
+function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int, gscale, gshift, gareascale)
+    gridcells = make_grid_cells(cells,ngrid)
+    VoronoiCellsA(ngrid,cells,gridcells, gscale, gshift, gareascale)    
 end
 
 # generate big array of cells from tesselation and store them in grid structure

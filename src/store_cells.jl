@@ -69,10 +69,11 @@ function read_cell_grid(strm::IOStream)
     data_type = buf[1]
     data_type == CELLARRAY || error("Unknown data type $data_type when reading cell grid")
     cells = read_cells(strm)
-    gcells = cellstogrid(cells,ngrid)
-    gcells._scale = scale
-    gcells._shift = shift
-    gcells._areascale = areascale
+    gcells = cellstogrid(cells,ngrid, scale, shift, areascale)
+    println("scale $scale, shift $shift, areascale $areascale")
+    # gcells._scale = scale
+    # gcells._shift = shift
+    # gcells._areascale = areascale
     gcells
 end
 
@@ -151,5 +152,18 @@ function ==(c1::VoronoiCell, c2::VoronoiCell)
     for i in 1:n1
         c1._verts[i] == c2._verts[i] || return false
     end
+    true
+end
+
+# This can be used to check for equality of written and read cells with grid
+
+function ==(cells1::VoronoiCellsA, cells2::VoronoiCellsA)
+    length(cells1) != length(cells2) && return false
+    for i in 1:length(cells1)
+        cells1[i] != cells2[i] && return false
+    end
+    getshift(cells1) != getshift(cells2) && return false
+    getscale(cells1) != getscale(cells2) && return false
+    getareascale(cells1) != getareascale(cells2) && return false
     true
 end
