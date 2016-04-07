@@ -39,10 +39,8 @@ function Base.write(strm::IOStream,cells::Array{VoronoiCell,1})
         write(strm,nverts)
         @inbounds for j in 1:nverts
             vert = cell._verts[j]
-            vx = getx(vert)
-            vy = gety(vert)
-            write(strm,vx)
-            write(strm,vy)
+            write(strm, getx(vert))
+            write(strm, gety(vert))
         end
     end
 end
@@ -70,10 +68,6 @@ function read_cell_grid(strm::IOStream)
     data_type == CELLARRAY || error("Unknown data type $data_type when reading cell grid")
     cells = read_cells(strm)
     gcells = cellstogrid(cells,ngrid, scale, shift, areascale)
-    println("scale $scale, shift $shift, areascale $areascale")
-    # gcells._scale = scale
-    # gcells._shift = shift
-    # gcells._areascale = areascale
     gcells
 end
 
