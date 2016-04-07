@@ -5,7 +5,7 @@ using GeometricalPredicates
 import GeometricalPredicates
 import GeometricalPredicates: area  # needed so that area() can be called in runtests.jl
 import VoronoiDelaunay.isexternal, VoronoiDelaunay.locate, VoronoiDelaunay.findindex
-import Base: getindex, ==, -
+import Base: getindex, ==, -, sizeof
 
 export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, voronoicells2, findindex, locate, invoronoicell, area, avoronoicellsnogrid
 export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale
@@ -508,15 +508,20 @@ end
 # Version 0.5.0-dev+3385 (2016-04-02 23:53 UTC) throws an error when
 # trying to use 'collect' as in commented out code above. So
 # we make an explicit loop to create the cell files.
-function voronoicells(t::DelaunayTessellation2D)
+function voronoicells(t::DelaunayTessellation2D, ndiv::Int)
     celltask = voronoicellsnogrid(t)
     cells = Array(VoronoiCell,0)
     for cell in celltask
         push!(cells, cell)
     end
-    ngrid = round(Int,sqrt(length(cells))/10)
+    ngrid = round(Int,sqrt(length(cells))/ndiv)
     cellstogrid(cells, ngrid)
 end
+
+function voronoicells(t::DelaunayTessellation2D)
+    voronoicells(t,10) # ndiv defaults to 10
+end
+
 
 # find index in short array of indices into big array of indices of cells
 # such that the cell contains point (x,y). If no such index exists in the
@@ -661,8 +666,8 @@ locate(gridcells::VoronoiCellsA,x,y) =  locate(gridcells, Point2D(x,y))
 # Return just the tesselation structure.
 function poissontesselation(n::Int)
     width = max_coord - min_coord
-    a = Point2D[Point(min_coord+rand()*width, min_coord+rand()*width) for i in 1:n]
-    tess = DelaunayTessellation()
+    a = Point2D[Point(min_coord+rand()*width, min_coord+rand()*width) for i in 1:n]  # this is very fast
+    tess = DelaunayTessellation()   # this is 5 or 6 times faster than making the cell structure
     push!(tess,a)
     tess
 end
@@ -728,5 +733,22 @@ sarea(gcells::VoronoiCellsA, idx::VoronoiCellIdx) = sarea(gcells, splat(idx)...)
 smaxcoord(gcells) = scale(gcells,max_coord)
 smincoord(gcells) = scale(gcells,min_coord)
 sgetgenerator(gcells::VoronoiCellsA, c::VoronoiCell) = scale(gcells,c._generator)
+
+#####
+
+function sizeof(c::VoronoiCell)
+    s1::Int = sizeof(c._generator)
+    s2::Int = sizeof(c._verts)
+    s3::Int = 8  # for address of c._verts
+    s1 + s2 + s3
+end
+
+function sizeof(cells::VoronoiCellsA)
+    s1::Int = sizeof(cells._cells)
+    s2::Int = sizeof(cells._grid)
+    s3::Int = 32 # for four simple members
+    s1 + s2 + s3
+end
+
 
 #end # module

@@ -87,3 +87,15 @@ There is more to the interface including unscaled versions of functions. The
 unscaled area is a square with both `x` and `y` coordinates restricted
 to approximately `1 <= x,y <= 2`. See [VoronoiDelaunay.jl](https://github.com/JuliaGeometry/VoronoiDelaunay.jl)
 for details. More of the interface may be documented later.
+
+```julia
+sizeof(poissonvoronoicells(npts))
+```
+
+Size in bytes for storage of cells. This includes cell generators, edges, and the grid structure.
+
+```julia
+cells = poissonvoronoicells(npts)
+sizeof(cells[1])
+```
+sizeof a single cell.
