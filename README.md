@@ -22,7 +22,6 @@ Lookup of the cell containing a point is done via a square grid. By default, abo
 will put about `ndiv^2` generator points in each square, at the cost of a higher storage
 requirement with increasing `ndiv`.
 
-
 ```julia
 smaxcoord(cells), smincoord(cells)
 ```

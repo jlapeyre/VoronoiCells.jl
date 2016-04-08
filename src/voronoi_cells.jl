@@ -751,7 +751,7 @@ function sizeof(cells::VoronoiCellsA)
     s1 + s2 + s3
 end
 
-#####
+##### Following not exported
 
 # This should be about ndiv^2.
 function mean_num_points_per_grid_square(cells::VoronoiCellsA)
@@ -761,5 +761,14 @@ function mean_num_points_per_grid_square(cells::VoronoiCellsA)
     end
     sum / length(cells._grid)
 end
+
+function number_of_generators_in_grid(cells::VoronoiCellsA)
+    sum::Int = 0
+    for i in 1:length(cells._grid)
+        sum += length(cells._grid[i])
+    end
+    sum
+end
+
 
 #end # module
