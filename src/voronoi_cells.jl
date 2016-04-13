@@ -7,10 +7,27 @@ import GeometricalPredicates: area  # needed so that area() can be called in run
 import VoronoiDelaunay.isexternal, VoronoiDelaunay.locate, VoronoiDelaunay.findindex
 import Base: getindex, ==, -, sizeof
 
-export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, voronoicells2, findindex, locate, invoronoicell, area, avoronoicellsnogrid
+if Pkg.installed("Distributions") == nothing
+    @eval const haveDistributions = false
+else
+    @eval const haveDistributions = true
+    using Distributions
+end
+    
+
+export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, findindex, locate, invoronoicell, area, avoronoicellsnogrid
 export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale
 
 export VoronoiCellIdx, isvalid, getinvalidcellindex
+
+# For VoronoiCellsA
+export cellstogrid, poissontesselation, poissonvoronoicells, poissonvoronoicellsnogrid,
+approxpoissontesselation, approxpoissonvoronoicells, approxpoissonvoronoicellsnogrid,
+       ngrid, findindex0
+export slocate, sfindindex0, sfindindex, sarea, smaxcoord, smincoord, sgetgenerator
+export getareascale, getscale, getshift, getcells
+
+####
 
 const min_coord = GeometricalPredicates.min_coord + eps(Float64)
 const max_coord = GeometricalPredicates.max_coord - eps(Float64)
@@ -371,11 +388,6 @@ function avoronoicellsnogrid(t::DelaunayTessellation2D)
     cells
 end
 
-export cellstogrid, poissontesselation, poissonvoronoicells, poissonvoronoicellsnogrid,
-       ngrid, findindex0
-export slocate, sfindindex0, sfindindex, sarea, smaxcoord, smincoord, sgetgenerator
-export getareascale, getscale, getshift
-
 #### VoronoiCellsA
 
 # Voronoi cells arranged in efficiently searchable array
@@ -411,6 +423,7 @@ getinvalidcellindex() = VoronoiCellIdx(0,0,0)
 getareascale(gcells::VoronoiCellsA) = gcells._areascale
 getscale(gcells::VoronoiCellsA) = gcells._scale
 getshift(gcells::VoronoiCellsA) = gcells._shift
+getcells(gcells::VoronoiCellsA) = gcells._cells
 # Note that c[i], c[i,j], c[i,j,k] return very different things
 getindex(c::VoronoiCellsA, i::Int) = c._cells[i]
 getindex(c::VoronoiCellsA, i::Int, j::Int) = c._grid[i,j]
@@ -664,7 +677,34 @@ end
 locate(gridcells::VoronoiCellsA,x,y) =  locate(gridcells, Point2D(x,y))
 
 # Return just the tesselation structure.
-function poissontesselation(n::Int)
+
+# Generate a sample of Poisson point process in the plane and return Delaunay tesselation.
+# If Distributions is installed, sample the number of generator points npts in the unit square, assuming that
+# the mean number is n. Otherwise, we take npts to be n. In any case approxpoissontesselation
+# always does the latter.
+
+# We should generate all these with a macro, of course!
+if haveDistributions
+@eval function poissontesselation{T<:Real}(n::T)
+    width = max_coord - min_coord
+    npts = rand(Poisson(n))
+    a = Point2D[Point(min_coord+rand()*width, min_coord+rand()*width) for i in 1:npts]  # this is very fast
+    tess = DelaunayTessellation()   # this is 5 or 6 times faster than making the cell structure
+    push!(tess,a)
+    tess
+end
+else
+ @eval   function poissontesselation(n::Int)
+    width = max_coord - min_coord
+    a = Point2D[Point(min_coord+rand()*width, min_coord+rand()*width) for i in 1:n]  # this is very fast
+    tess = DelaunayTessellation()   # this is 5 or 6 times faster than making the cell structure
+    push!(tess,a)
+    tess
+   end
+end
+
+# Not an exact sample of the Poisson point process in the plane
+function approxpoissontesselation(n::Int)
     width = max_coord - min_coord
     a = Point2D[Point(min_coord+rand()*width, min_coord+rand()*width) for i in 1:n]  # this is very fast
     tess = DelaunayTessellation()   # this is 5 or 6 times faster than making the cell structure
@@ -672,21 +712,20 @@ function poissontesselation(n::Int)
     tess
 end
 
+
 # Create tesselation of poisson point process sample.
 # Return only the efficient cell structure.
 # ndiv^2 is the average number of generator points per square in the grid
-function poissonvoronoicells(n::Int, ndiv)
+function poissonvoronoicells(n, ndiv)
     tess = poissontesselation(n)
     gcells = voronoicells(tess,ndiv)
-#    standard_scale_and_shift!(gcells,n)  # disable so that VoronoiCellsA can be immutable
     gcells
 end
 
 # Same as above, but calculate standard grid sized from number of cells
-function poissonvoronoicells(n::Int)
+function poissonvoronoicells(n)
     tess = poissontesselation(n)
     gcells = voronoicells(tess)
-#    standard_scale_and_shift!(gcells,n)
     gcells
 end
 
@@ -702,6 +741,29 @@ function poissonvoronoicellsnogrid(n::Int)
     end    
     cells
 end
+
+function approxpoissonvoronoicells(n, ndiv)
+    tess = approxpoissontesselation(n)
+    gcells = voronoicells(tess,ndiv)
+    gcells
+end
+
+function approxpoissonvoronoicells(n)
+    tess = approxpoissontesselation(n)
+    gcells = voronoicells(tess)
+    gcells
+end
+
+function approxpoissonvoronoicellsnogrid(n::Int)
+    tess = approxpoissontesselation(n)
+    celltask = voronoicellsnogrid(tess)
+    cells = Array(VoronoiCell,0)
+    for cell in celltask
+        push!(cells, cell)
+    end    
+    cells
+end
+
 
 ####
 

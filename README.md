@@ -12,15 +12,24 @@ most recent, high-level interface.
 ```julia
 cells = poissonvoronoicells(npts)
 ```
-Sample (approximately) a Poisson point process with exactly `npts` points.
-Return the Voronoi cells. Only complete cells within a square area are returned.
+Sample a Poisson point process in the plain with mean `npts` 'generator' points per unit square and
+return the Voronoi cells. Only complete cells within the unit square [1,2] x [1,2] are returned.
 The cells very near the boundary do not have the same geometrical statistics
-as those in the bulk.
+as those in the bulk. `length(cells)` returns the number of cells retained. If `Distributions.jl` is
+installed, then the number of generators in the square is sampled from the Poisson distribution, otherwise,
+the number is taken to be exactly `npts`. Use  `approxpoissonvoronoicells(npts)` to force the latter behavior.
 
 Lookup of the cell containing a point is done via a square grid. By default, about
 100 generator points are put in each square. `cells = poissonvoronoicells(npts,ndiv)`,
 will put about `ndiv^2` generator points in each square, at the cost of a higher storage
 requirement with increasing `ndiv`.
+
+```julia
+cells = poissonvoronoicellsnogrid(npts)
+```
+
+This returns an array of `VoronoiCell`'s without the grid structure for locating them.
+
 
 ```julia
 smaxcoord(cells), smincoord(cells)
@@ -30,14 +39,22 @@ the average cell size is (approximately) `1` and the origin is at the center of 
 
 ```julia
 idx = sfindindex(cells,x,y)
+idx = findindex(cells,x,y)
+isvalid(idx)
 ```
-Search efficiently for and return the index of the cell containing the scaled point `(x,y)`.
-The cell may then be retrieved via `cells[idx]`.
+`sfindindex` searches efficiently for and returns the index of the cell containing the scaled point `(x,y)`.
+The cell may then be retrieved via `cells[idx]`.  `findindex` finds cells at unscaled (within the shifted unit square)
+coordinates. If no cell contains the point `(x,y)`, an invalid index is returned. This condition is checked with `isvalid()`.
 
 ```julia
 isvalid(idx)
 ```
 Return `true` if a cell was found containing `(x,y)`, otherwise `false`.
+
+```julia
+getinvalidcellindex()
+```
+Returns an invalid cell index.
 
 ```julia
 c = cells[idx], sarea(cells,idx), nedges(c), nverts(c)
@@ -55,6 +72,25 @@ use any generic serialization.
 cells = read_one_cellfile("fname.dat")
 ```
 Read cells from file written by `write`.
+
+
+```julia
+cells = poissonvoronoicells(npts)
+isexternal(cell[i])
+```
+Returns `true` if the vertices of the cell lie entirely within the unit square [1,2] x [1,2].
+
+```julia
+t = poissontesselation(npts)
+t = approxpoissontesselation(npts)
+```
+Return Delaunay tesselation of the poisson point process in the plane.
+
+```julia
+gcells = voronoicells(t)
+cells = voronoicellsnogrid(t)
+```
+Return the cells corresponding to the `DelaunayTessellation2D` `t`.
 
 ### Example
 
