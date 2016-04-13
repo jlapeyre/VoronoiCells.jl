@@ -5,7 +5,7 @@ using GeometricalPredicates
 import GeometricalPredicates
 import GeometricalPredicates: area  # needed so that area() can be called in runtests.jl
 import VoronoiDelaunay.isexternal, VoronoiDelaunay.locate, VoronoiDelaunay.findindex
-import Base: getindex, ==, -, sizeof
+import Base: getindex, ==, -, sizeof, endof
 
 if Pkg.installed("Distributions") == nothing
     @eval const haveDistributions = false
@@ -18,14 +18,14 @@ end
 export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, findindex, locate, invoronoicell, area, avoronoicellsnogrid
 export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale
 
-export VoronoiCellIdx, isvalid, getinvalidcellindex
+export VoronoiCellIndex, isvalid, getinvalidcellindex
 
 # For VoronoiCellsA
 export cellstogrid, poissontesselation, poissonvoronoicells, poissonvoronoicellsnogrid,
 approxpoissontesselation, approxpoissonvoronoicells, approxpoissonvoronoicellsnogrid,
        ngrid, findindex0
 export slocate, sfindindex0, sfindindex, sarea, smaxcoord, smincoord, sgetgenerator
-export getareascale, getscale, getshift, getcells
+export getareascale, getscale, getshift, getcells, random_cell
 
 ####
 
@@ -45,19 +45,21 @@ distanceL1(p1::Point2D,p2::Point2D) = abs(getx(p2)-getx(p1)) + abs(gety(p2)-gety
 
 # sign shows which side of line between P(x1,y1) P(x2,y2) the point
 # P(x,y) lies
-lineside(x1,y1,x2,y2,x,y) = (y-y1)*(x2-x1) - (x-x1)*(y2-y1)
+#lineside(x1,y1,x2,y2,x,y) = (y-y1)*(x2-x1) - (x-x1)*(y2-y1)
+
+lineside(p1,p2,p) = (gety(p)-gety(p1))*(getx(p2)-getx(p1)) - (getx(p)-getx(p1))*(gety(p2)-gety(p1))
 
 # true if p is inside poly, ie. if lineside gives the same sign for all edges in Voronoi cell
-function inconvexpolygon(poly::Array{Point2D,1}, x,y)
+function inconvexpolygon(poly::Array{Point2D,1}, p0::Point2D)
     is_inconvexpolygon = true
     n = length(poly)
     p1 = poly[n]
     p2 = poly[1]
-    s = lineside(getx(p1),gety(p1),getx(p2),gety(p2),x,y)
+    s = lineside(p1,p2,p0)
     @inbounds for i in 1:length(poly)-1
         p1 = poly[i]
         p2 = poly[i+1]
-        s1::Float64 = lineside(getx(p1),gety(p1),getx(p2),gety(p2),x,y)
+        s1::Float64 = lineside(p1,p2,p0)
         if sign(s1) != sign(s)
             is_inconvexpolygon = false
             break
@@ -65,7 +67,15 @@ function inconvexpolygon(poly::Array{Point2D,1}, x,y)
     end
     is_inconvexpolygon
 end
-inconvexpolygon(poly::Array{Point2D,1}, p::Point2D) = inconvexpolygon(poly,getx(p),gety(p))
+
+#inconvexpolygon(poly::Array{Point2D,1}, p::Point2D) = inconvexpolygon(poly,getx(p),gety(p))
+
+function random_coordinate()
+    width = max_coord - min_coord
+    min_coord+rand()*width
+end
+
+random_point() = Point2D(random_coordinate(),random_coordinate())
 
 #### Some functions that only operate on VoronoiDelaunay objects.
 
@@ -235,7 +245,7 @@ function isexternal(c::VoronoiCell)
 end
 
 invoronoicell(c::VoronoiCell, p::Point2D) = inconvexpolygon(c._verts,p)
-invoronoicell(c::VoronoiCell, x,y) = inconvexpolygon(c._verts,x,y)
+#invoronoicell(c::VoronoiCell, x,y) = inconvexpolygon(c._verts,x,y)
 
 # Find the index in an array of cells of the (first) cell containing point p,
 # or zero if no cell contains p.
@@ -407,18 +417,33 @@ immutable VoronoiCellsA
 end
 
 # index into grid and array structure VoronoiCellsA
-immutable VoronoiCellIdx
+immutable VoronoiCellIndex
     _ix::Int
     _iy::Int
     _ind::Int
 end
 
+# Pick random points on the shifted unit square and return the cell there.
+# This weights cells by their areas.
+function random_cell(c::VoronoiCellsA)
+    ntries::Int = 0
+    local idx::VoronoiCellIndex
+    while true
+        pt = random_point()
+        ntries += 1
+        idx = VoronoiCellIndex(findindex0(c,pt)...)
+        if isvalid(idx) break end
+        if ntries > 1000 error("VoronoiCells: can't find a random cell") end
+    end
+    c[idx]
+end
+                     
 
-Base.isvalid(iv::VoronoiCellIdx) = iv._ind != 0
-splat(iv::VoronoiCellIdx) = (iv._ix,iv._iy,iv._ind)
-==(iv1::VoronoiCellIdx, iv2::VoronoiCellIdx) = splat(iv1) == splat(iv2)
-# ==(iv1::VoronoiCellIdx, iv2::VoronoiCellIdx) = iv1._ix == iv2._ix && iv1._iy == iv2._iy && iv1._ind == iv2._ind
-getinvalidcellindex() = VoronoiCellIdx(0,0,0)
+Base.isvalid(iv::VoronoiCellIndex) = iv._ind != 0
+splat(iv::VoronoiCellIndex) = (iv._ix,iv._iy,iv._ind)
+==(iv1::VoronoiCellIndex, iv2::VoronoiCellIndex) = splat(iv1) == splat(iv2)
+# ==(iv1::VoronoiCellIndex, iv2::VoronoiCellIndex) = iv1._ix == iv2._ix && iv1._iy == iv2._iy && iv1._ind == iv2._ind
+getinvalidcellindex() = VoronoiCellIndex(0,0,0)
 
 getareascale(gcells::VoronoiCellsA) = gcells._areascale
 getscale(gcells::VoronoiCellsA) = gcells._scale
@@ -428,12 +453,13 @@ getcells(gcells::VoronoiCellsA) = gcells._cells
 getindex(c::VoronoiCellsA, i::Int) = c._cells[i]
 getindex(c::VoronoiCellsA, i::Int, j::Int) = c._grid[i,j]
 getindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._cells[c._grid[i,j][k]]
-getindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getindex(c,splat(iv)...)
-#getindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getindex(c,iv._ix, iv._iy, iv._ind)
+getindex(c::VoronoiCellsA, iv::VoronoiCellIndex) = getindex(c,splat(iv)...)
+endof(c::VoronoiCellsA) = endof(c._cells)
+#getindex(c::VoronoiCellsA, iv::VoronoiCellIndex) = getindex(c,iv._ix, iv._iy, iv._ind)
 # return integer index into big 1d array of all cells
 getcellindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._grid[i,j][k]
-getcellindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getcellindex(c, splat(iv)...)
-#getcellindex(c::VoronoiCellsA, iv::VoronoiCellIdx) = getcellindex(c, iv._ix, iv._iy, iv._ind)
+getcellindex(c::VoronoiCellsA, iv::VoronoiCellIndex) = getcellindex(c, splat(iv)...)
+#getcellindex(c::VoronoiCellsA, iv::VoronoiCellIndex) = getcellindex(c, iv._ix, iv._iy, iv._ind)
 Base.length(c::VoronoiCellsA) = length(c._cells)
 ngrid(c::VoronoiCellsA) = c._ngrid
 
@@ -462,9 +488,10 @@ end
 # of box that gp is in.
 # This probably throws away carefully preserved precision.
 # Should we use width of area rather than 1.0 ?
-function find_grid_element(x::Float64, y::Float64, ngrid::Int)
-    ix::Int = round(Int64, (x - 1.0) * ngrid) + 1
-    iy::Int = round(Int64, (y - 1.0) * ngrid) + 1
+#function find_grid_element(x::Float64, y::Float64, ngrid::Int) = find_grid_element(Point2D(x,y),ngrid)
+function find_grid_element(pt::Point2D, ngrid::Int)    
+    ix::Int = round(Int64, (getx(pt) - 1.0) * ngrid) + 1
+    iy::Int = round(Int64, (gety(pt) - 1.0) * ngrid) + 1
     ix > ngrid ? ix = ngrid : nothing
     iy > ngrid ? iy = ngrid : nothing
     ix < 1 ? ix = 1 : nothing
@@ -472,7 +499,7 @@ function find_grid_element(x::Float64, y::Float64, ngrid::Int)
     return (ix,iy)  # return indices
 end
 
-find_grid_element(p::Point2D, ngrid::Int) = find_grid_element(getx(p),gety(p),ngrid)
+#find_grid_element(p::Point2D, ngrid::Int) = find_grid_element(getx(p),gety(p),ngrid)
 find_grid_element(cell::VoronoiCell, ngrid::Int) = find_grid_element(cell._generator, ngrid)
 
 function make_grid_cells(cells::Array{VoronoiCell,1}, ngrid::Int)
@@ -542,10 +569,10 @@ end
 # cells -- array of all cells
 # indarray -- array of indices into cells corresponding one grid element
 # x,y -- point in cell we are searching for
-function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, x,y)
+function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D)
     ifound = 0
     for i in 1:length(indarray)
-        if invoronoicell(cells[indarray[i]],x,y)
+        if invoronoicell(cells[indarray[i]],p)
             ifound = i
             break
         end
@@ -554,19 +581,22 @@ function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, x,y)
 end
 
 # Find index into gc._cells of cell containing (x,y) searching in indarray
-findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D) = findindexA(cells,indarray,getx(p),gety(p))
+#findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D) = findindexA(cells,indarray,getx(p),gety(p))
 
 # same as findindexA, but gc contains all structures and we identify index (i,j)
 # of grid element corresponding to short array of indices.
 # Find cell containing (x,y) in bin (i,j) and return index into gc._cells
-findindexingrid(gc::VoronoiCellsA, i, j, x, y) = findindexA(gc._cells,gc._grid[i,j],x,y)
-
+# findindexingrid(gc::VoronoiCellsA, i, j, x, y) = findindexA(gc._cells,gc._grid[i,j],x,y)
+findindexingrid(gc::VoronoiCellsA, i, j, pt) = findindexA(gc._cells,gc._grid[i,j],pt)    
 
 # TODO: make cleaner use of (x,y)  <--> Point2D(x,y)
-function findindex00(gridcells::VoronoiCellsA, x::Float64, y::Float64)
-    (ix::Int,iy::Int) = find_grid_element(x,y,size(gridcells._grid,1))
-    ind::Int = findindexA(gridcells._cells, gridcells._grid[ix,iy], Point2D(x,y))
-    return(ix,iy,ind)
+#function findindex00(gridcells::VoronoiCellsA, x::Float64, y::Float64) = findindex00(gridcells,Point2D(x,y))
+    
+function findindex00(gridcells::VoronoiCellsA, pt::Point2D)
+    (ix::Int,iy::Int) = find_grid_element(pt,size(gridcells._grid,1))
+    ind::Int = findindexA(gridcells._cells, gridcells._grid[ix,iy], pt)
+#    VoronoiCellIndex(ix,iy,ind)
+    return(ix,iy,ind)    
 end
 
 # Find index of cell in gc containing point p.
@@ -575,53 +605,53 @@ end
 # of randomly chosen points. In these cases, we look for the point in the neighboring bins.
 # Test shows that this works for all random points (no misses found in 10^7 or more trials)
 # Each case below occurs in 10^6 trials.
-#function findindex0(grc::VoronoiCellsA, p::Point2D)
-function findindex0(grc::VoronoiCellsA, x::Float64, y::Float64)
-#    (x,y) = (getx(p),gety(p))
-    (ix::Int,iy::Int, ind::Int) = findindex00(grc,x,y)
+#function findindex0(grc::VoronoiCellsA, x::Float64, y::Float64)
+function findindex0(grc::VoronoiCellsA, p::Point2D)
+#    (x::Float64,y::Float64) = (getx(p),gety(p))
+    (ix::Int,iy::Int, ind::Int) = findindex00(grc,p)
     ind != 0 && return (ix,iy,ind)
     if ix > 1
         ix0 = ix-1
         iy0 = iy
-        ind = findindexingrid(grc,ix0,iy0,x,y)
+        ind = findindexingrid(grc,ix0,iy0,p)
         ind != 0 && return (ix0,iy0,ind)
         if iy > 1
             iy0 = iy-1
-            ind = findindexingrid(grc,ix0,iy0,x,y)
+            ind = findindexingrid(grc,ix0,iy0,p)
             ind != 0 && return (ix0,iy0,ind)
         end
         if iy < ngrid(grc)
             iy0 = iy+1
-            ind = findindexingrid(grc,ix0,iy0,x,y)
+            ind = findindexingrid(grc,ix0,iy0,p)
             ind != 0 && return (ix0,iy0,ind)
         end
     end
     if ix < ngrid(grc)
         ix0 = ix+1
         iy0 = iy
-        ind = findindexingrid(grc,ix0,iy0,x,y)
+        ind = findindexingrid(grc,ix0,iy0,p)
         ind != 0 && return (ix0,iy0,ind)
         if iy > 1
             iy0 = iy-1
-            ind = findindexingrid(grc,ix0,iy0,x,y)
+            ind = findindexingrid(grc,ix0,iy0,p)
             ind != 0 && return (ix0,iy0,ind)
         end
         if iy < ngrid(grc)
             iy0 = iy+1
-            ind = findindexingrid(grc,ix0,iy0,x,y)
+            ind = findindexingrid(grc,ix0,iy0,p)
             ind != 0 && return (ix0,iy0,ind)
         end
     end
     if iy > 1
         iy0 = iy-1
         ix0 = ix
-        ind = findindexingrid(grc,ix0,iy0,x,y)
+        ind = findindexingrid(grc,ix0,iy0,p)
         ind != 0 && return (ix0,iy0,ind)
     end
     if iy < ngrid(grc)
         iy0 = iy+1
         ix0 = ix
-        ind = findindexingrid(grc,ix0,iy0,x,y)
+        ind = findindexingrid(grc,ix0,iy0,p)
         ind != 0 && return (ix0,iy0,ind)
     end
     return (ix,iy,ind)
@@ -630,11 +660,10 @@ end
 # User gives last returned index as hint if new p is close to p for last call
 # i.e. assume we are in the same cell. We also assume that the same indices
 # ix,iy will be computed. If hint is wrong, we do the usual search.
-#function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
-function findindex0(gridcells::VoronoiCellsA, hint::Int, x::Float64, y::Float64)
-    (ix::Int,iy::Int) = find_grid_element(x,y,size(gridcells._grid,1))
-    length(gridcells[ix,iy]) >= hint && invoronoicell(gridcells[ix,iy,hint],x,y) && return (ix,iy,hint)
-    findindex0(gridcells,x,y)
+function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
+    (ix::Int,iy::Int) = find_grid_element(p,size(gridcells._grid,1))
+    length(gridcells[ix,iy]) >= hint && invoronoicell(gridcells[ix,iy,hint],p) && return (ix,iy,hint)
+    findindex0(gridcells,p)
 end
 # function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
 #     (ix,iy) = find_grid_element(p,size(gridcells._grid,1))
@@ -643,20 +672,25 @@ end
 # end
 
 #findindex0(gridcells::VoronoiCellsA, x,y) = findindex0(gridcells, Point2D(x,y))
-findindex0(gridcells::VoronoiCellsA, p::Point2D) = findindex0(gridcells, getx(p), gety(p))
+
 #findindex0(gridcells::VoronoiCellsA, hint::Int, x,y) = findindex0(gridcells, hint, Point2D(x,y))
-findindex0(gridcells::VoronoiCellsA, hint, p::Point2D) = findindex0(gridcells, hint, getx(p), gety(p))
-findindex(gridcells::VoronoiCellsA, x,y) = VoronoiCellIdx(findindex0(gridcells,x,y)...)
-findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIdx, x,y) = VoronoiCellIdx(findindex0(gridcells,hint._ind, x,y)...)
+#findindex0(gridcells::VoronoiCellsA, hint, p::Point2D) = findindex0(gridcells, hint, getx(p), gety(p))
+
+findindex(gridcells::VoronoiCellsA, x,y) = VoronoiCellIndex(findindex0(gridcells,x,y)...)
+findindex(gridcells::VoronoiCellsA, p::Point2D) = VoronoiCellIndex(findindex0(gridcells,p)...)
+
+findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, p::Point2D) =
+    VoronoiCellIndex(findindex0(gridcells,hint._ind, p)...)
+findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, x,y) = VoronoiCellIndex(findindex0(gridcells,hint._ind, x,y)...)
 
 # Probably don't use this, because we would have to prevent errors first,
 # which is expensive.
-function findindex1(gridcells::VoronoiCellsA, p::Point2D)
-    (ix,iy,ind) = findindex0(gridcells,p)
-    ind == 0 && error("locate: Can't find grid box for point ", p, ".")
-    return(ix,iy,ind)
-end
-findindex1(gridcells::VoronoiCellsA, x,y) = findindex(gridcells, Point2D(x,y))
+# function findindex1(gridcells::VoronoiCellsA, p::Point2D)
+#     (ix,iy,ind) = findindex0(gridcells,p)
+#     ind == 0 && error("locate: Can't find grid box for point ", p, ".")
+#     return(ix,iy,ind)
+# end
+# findindex1(gridcells::VoronoiCellsA, x,y) = findindex1(gridcells, Point2D(x,y))
 
 # Return false if there is no complete cell containing p
 function isexternal(gridcells::VoronoiCellsA, p::Point2D)
@@ -788,11 +822,11 @@ sfindindex0(gcells::VoronoiCellsA, hint, x,y) = findindex0(gcells,hint,iscale(gc
 sfindindex0(gcells::VoronoiCellsA, hint, p::Point2D) = findindex0(gcells, hint, iscale(gcells,p))
 sfindindex(gcells::VoronoiCellsA, x,y) = findindex(gcells,iscale(gcells,x),iscale(gcells,y))
 sfindindex(gcells::VoronoiCellsA, p::Point2D) = findindex(gcells, iscale(gcells,p))
-sfindindex(gridcells::VoronoiCellsA, hint::VoronoiCellIdx, x,y) = findindex(gridcells, hint, iscale(gridcells,x),iscale(gridcells,y))
+sfindindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, x,y) = findindex(gridcells, hint, iscale(gridcells,x),iscale(gridcells,y))
 sarea(gcells::VoronoiCellsA, i::Int) = area(gcells[i]) * getareascale(gcells)
 sarea(gcells::VoronoiCellsA, i::Int, j::Int, k::Int) = area(gcells[i,j,k]) * getareascale(gcells)
-sarea(gcells::VoronoiCellsA, idx::VoronoiCellIdx) = sarea(gcells, splat(idx)...)
-#sarea(gcells::VoronoiCellsA, idx::VoronoiCellIdx) = sarea(gcells, idx._ix, idx._iy, idx._ind)
+sarea(gcells::VoronoiCellsA, idx::VoronoiCellIndex) = sarea(gcells, splat(idx)...)
+#sarea(gcells::VoronoiCellsA, idx::VoronoiCellIndex) = sarea(gcells, idx._ix, idx._iy, idx._ind)
 smaxcoord(gcells) = scale(gcells,max_coord)
 smincoord(gcells) = scale(gcells,min_coord)
 sgetgenerator(gcells::VoronoiCellsA, c::VoronoiCell) = scale(gcells,c._generator)
