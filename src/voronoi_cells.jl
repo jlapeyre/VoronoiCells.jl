@@ -13,7 +13,7 @@ else
     @eval const haveDistributions = true
     using Distributions
 end
-    
+
 
 export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, findindex, locate, invoronoicell, area, avoronoicellsnogrid
 export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale
@@ -210,9 +210,9 @@ getgenerator(c::VoronoiCell) = c._generator
 
 # Area of irregular polygon. Don't make use of convex property.
 function area(c::VoronoiCell)
-    vs = c._verts
-    A = 0.0
-    n = length(vs)
+    vs::Array{Point2D,1} = c._verts
+    A::Float64 = 0.0
+    n::Int = length(vs)
     for i in 1:n-1
         A += getx(vs[i])*gety(vs[i+1]) -  getx(vs[i+1])*gety(vs[i])
     end
@@ -384,7 +384,7 @@ function random_cell(c::VoronoiCellsA)
     end
     c[idx]
 end
-                     
+
 
 Base.isvalid(iv::VoronoiCellIndex) = iv._ind != 0
 splat(iv::VoronoiCellIndex) = (iv._ix,iv._iy,iv._ind)
@@ -432,7 +432,7 @@ end
 # of box that gp is in.
 # This probably throws away carefully preserved precision.
 # Should we use width of area rather than 1.0 ?
-function find_grid_element(pt::Point2D, ngrid::Int)    
+function find_grid_element(pt::Point2D, ngrid::Int)
     ix::Int = round(Int64, (getx(pt) - 1.0) * ngrid) + 1
     iy::Int = round(Int64, (gety(pt) - 1.0) * ngrid) + 1
     ix > ngrid ? ix = ngrid : nothing
@@ -470,7 +470,7 @@ end
 
 function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int, gscale, gshift, gareascale)
     gridcells = make_grid_cells(cells,ngrid)
-    VoronoiCellsA(ngrid,cells,gridcells, gscale, gshift, gareascale)    
+    VoronoiCellsA(ngrid,cells,gridcells, gscale, gshift, gareascale)
 end
 
 # Version 0.5.0-dev+3385 (2016-04-02 23:53 UTC) throws an error when
@@ -511,13 +511,19 @@ end
 # same as findindexA, but gc contains all structures and we identify index (i,j)
 # of grid element corresponding to short array of indices.
 # Find cell containing (x,y) in bin (i,j) and return index into gc._cells
-findindexingrid(gc::VoronoiCellsA, i, j, pt) = findindexA(gc._cells,gc._grid[i,j],pt)    
-    
+findindexingrid(gc::VoronoiCellsA, i, j, pt) = findindexA(gc._cells,gc._grid[i,j],pt)
+
 function findindex00(gridcells::VoronoiCellsA, pt::Point2D)
     (ix::Int,iy::Int) = find_grid_element(pt,size(gridcells._grid,1))
     ind::Int = findindexA(gridcells._cells, gridcells._grid[ix,iy], pt)
-#    VoronoiCellIndex(ix,iy,ind)
-    return(ix,iy,ind)    
+    return(ix,iy,ind)
+end
+
+macro maybe_return_from_find_index()
+    esc(quote
+        ind = findindexingrid(grc,ix0,iy0,p)
+        ind != 0 && return (ix0,iy0,ind)
+        end)
 end
 
 # Find index of cell in gc containing point p.
@@ -525,53 +531,45 @@ end
 # Rounding errors cause point to not be found in a computed grid bin for about 2/3 percent
 # of randomly chosen points. In these cases, we look for the point in the neighboring bins.
 # Test shows that this works for all random points (no misses found in 10^7 or more trials)
-# Each case below occurs in 10^6 trials.
+# Each case caught below occurs in 10^6 trials.
 function findindex0(grc::VoronoiCellsA, p::Point2D)
     (ix::Int,iy::Int, ind::Int) = findindex00(grc,p)
     ind != 0 && return (ix,iy,ind)
     if ix > 1
         ix0 = ix-1
         iy0 = iy
-        ind = findindexingrid(grc,ix0,iy0,p)
-        ind != 0 && return (ix0,iy0,ind)
+        @maybe_return_from_find_index
         if iy > 1
             iy0 = iy-1
-            ind = findindexingrid(grc,ix0,iy0,p)
-            ind != 0 && return (ix0,iy0,ind)
+            @maybe_return_from_find_index
         end
         if iy < ngrid(grc)
             iy0 = iy+1
-            ind = findindexingrid(grc,ix0,iy0,p)
-            ind != 0 && return (ix0,iy0,ind)
+            @maybe_return_from_find_index
         end
     end
     if ix < ngrid(grc)
         ix0 = ix+1
         iy0 = iy
-        ind = findindexingrid(grc,ix0,iy0,p)
-        ind != 0 && return (ix0,iy0,ind)
+        @maybe_return_from_find_index
         if iy > 1
             iy0 = iy-1
-            ind = findindexingrid(grc,ix0,iy0,p)
-            ind != 0 && return (ix0,iy0,ind)
+            @maybe_return_from_find_index
         end
         if iy < ngrid(grc)
             iy0 = iy+1
-            ind = findindexingrid(grc,ix0,iy0,p)
-            ind != 0 && return (ix0,iy0,ind)
+            @maybe_return_from_find_index
         end
     end
     if iy > 1
         iy0 = iy-1
         ix0 = ix
-        ind = findindexingrid(grc,ix0,iy0,p)
-        ind != 0 && return (ix0,iy0,ind)
+        @maybe_return_from_find_index
     end
     if iy < ngrid(grc)
         iy0 = iy+1
         ix0 = ix
-        ind = findindexingrid(grc,ix0,iy0,p)
-        ind != 0 && return (ix0,iy0,ind)
+        @maybe_return_from_find_index
     end
     return (ix,iy,ind)
 end
@@ -591,7 +589,6 @@ findindex(gridcells::VoronoiCellsA, p::Point2D) = VoronoiCellIndex(findindex0(gr
 findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, p::Point2D) =
     VoronoiCellIndex(findindex0(gridcells,hint._ind, p)...)
 findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, x,y) = VoronoiCellIndex(findindex0(gridcells,hint._ind, x,y)...)
-
 
 # Return false if there is no complete cell containing p
 function isexternal(gridcells::VoronoiCellsA, p::Point2D)
@@ -673,7 +670,7 @@ function poissonvoronoicellsnogrid(n::Int)
     cells = Array(VoronoiCell,0)
     for cell in celltask
         push!(cells, cell)
-    end    
+    end
     cells
 end
 
@@ -695,7 +692,7 @@ function approxpoissonvoronoicellsnogrid(n::Int)
     cells = Array(VoronoiCell,0)
     for cell in celltask
         push!(cells, cell)
-    end    
+    end
     cells
 end
 
