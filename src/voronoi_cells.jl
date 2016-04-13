@@ -44,8 +44,6 @@ distanceL1(p1::Point2D,p2::Point2D) = abs(getx(p2)-getx(p1)) + abs(gety(p2)-gety
 -(p1::Point2D,p2::Point2D) = Point2D(getx(p1)-getx(p2),gety(p1)-gety(p2))
 
 # sign shows which side of line between P(x1,y1) P(x2,y2) the point
-# P(x,y) lies
-#lineside(x1,y1,x2,y2,x,y) = (y-y1)*(x2-x1) - (x-x1)*(y2-y1)
 
 lineside(p1,p2,p) = (gety(p)-gety(p1))*(getx(p2)-getx(p1)) - (getx(p)-getx(p1))*(gety(p2)-gety(p1))
 
@@ -67,8 +65,6 @@ function inconvexpolygon(poly::Array{Point2D,1}, p0::Point2D)
     end
     is_inconvexpolygon
 end
-
-#inconvexpolygon(poly::Array{Point2D,1}, p::Point2D) = inconvexpolygon(poly,getx(p),gety(p))
 
 function random_coordinate()
     width = max_coord - min_coord
@@ -245,7 +241,6 @@ function isexternal(c::VoronoiCell)
 end
 
 invoronoicell(c::VoronoiCell, p::Point2D) = inconvexpolygon(c._verts,p)
-#invoronoicell(c::VoronoiCell, x,y) = inconvexpolygon(c._verts,x,y)
 
 # Find the index in an array of cells of the (first) cell containing point p,
 # or zero if no cell contains p.
@@ -276,58 +271,16 @@ function find_cell(trigs,tr, iv_gen, iv_opp, visited)
     is_visited::Bool = false
     while true
         (tr2, itr2, iv_gen, iv_opp, iv_other) = next_cell_triangle(trigs, tr, iv_gen, iv_opp, iv_other)
-#        if (visited[itr2] || isexternal(tr2)) && tr2 != tr0
         if visited[itr2] && tr2 != tr0
             is_visited = true
             break
         end
-        # if isexternal(tr)
-        #     is_visited = true
-        #     break
-        # end
         push!(cell._verts, circumcenter(tr))
         if tr2 == tr0 break end
         tr = tr2
     end
     (is_visited,cell)
 end
-
-# function voronoicells2(t::DelaunayTessellation2D)
-#     visited = zeros(Bool, t._last_trig_index)
-#     visited[1] = true
-#     function voronoicelliterator()
-#         j = 0
-# 	for ix in 2:t._last_trig_index
-# 	    visited[ix] && continue
-# 	    const tr = t._trigs[ix]
-# 	    visited[ix] = true
-#             isexternal(tr) && continue
-#             for iv_gen in 1:3
-
-#                 iv_opp = mod1(iv_gen+1,3) # pick one of the other two vertices
-
-#                 # ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
-#                 # visited[ix2] && continue
-
-#                 #                isexternal(t._trigs[ix2]) && continue
-
-#                 # iv_opp = mod1(iv_gen+2,3) # pick the remaining vertex
-#                 # ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
-#                 # visited[ix2] && continue
-
-#                 #                isexternal(t._trigs[ix2]) && continue
-
-#                 (is_visited, cell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
-#                 is_visited && continue
-#                 j += 1
-# #                j > 10000 && return
-#                 isexternal(cell) && continue # just checking each triangle does not seem to work.
-#                 produce(cell)
-#             end
-#         end
-#     end
-#     Task(voronoicelliterator)
-# end
 
 function voronoicellsnogrid(t::DelaunayTessellation2D)
     visited = zeros(Bool, t._last_trig_index)
@@ -344,13 +297,10 @@ function voronoicellsnogrid(t::DelaunayTessellation2D)
                 iv_opp = mod1(iv_gen+1,3) # pick one of the other two vertices
                 ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
                 visited[ix2] && continue
-                #                isexternal(t._trigs[ix2]) && continue
 
                 iv_opp = mod1(iv_gen+2,3) # pick the remaining vertex
                 ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
                 visited[ix2] && continue
-
-                #                isexternal(t._trigs[ix2]) && continue
 
                 (is_visited, cell::VoronoiCell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
                 is_visited && continue
@@ -379,13 +329,10 @@ function avoronoicellsnogrid(t::DelaunayTessellation2D)
             iv_opp = mod1(iv_gen+1,3) # pick one of the other two vertices
             ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
             visited[ix2] && continue
-            #                isexternal(t._trigs[ix2]) && continue
 
             iv_opp = mod1(iv_gen+2,3) # pick the remaining vertex
             ix2 = get_neighbor_index(t._trigs,tr,iv_opp)
             visited[ix2] && continue
-
-            #                isexternal(t._trigs[ix2]) && continue
 
             (is_visited, cell) = find_cell(t._trigs, tr, iv_gen, iv_opp, visited)
             is_visited && continue
@@ -442,7 +389,6 @@ end
 Base.isvalid(iv::VoronoiCellIndex) = iv._ind != 0
 splat(iv::VoronoiCellIndex) = (iv._ix,iv._iy,iv._ind)
 ==(iv1::VoronoiCellIndex, iv2::VoronoiCellIndex) = splat(iv1) == splat(iv2)
-# ==(iv1::VoronoiCellIndex, iv2::VoronoiCellIndex) = iv1._ix == iv2._ix && iv1._iy == iv2._iy && iv1._ind == iv2._ind
 getinvalidcellindex() = VoronoiCellIndex(0,0,0)
 
 getareascale(gcells::VoronoiCellsA) = gcells._areascale
@@ -455,11 +401,9 @@ getindex(c::VoronoiCellsA, i::Int, j::Int) = c._grid[i,j]
 getindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._cells[c._grid[i,j][k]]
 getindex(c::VoronoiCellsA, iv::VoronoiCellIndex) = getindex(c,splat(iv)...)
 endof(c::VoronoiCellsA) = endof(c._cells)
-#getindex(c::VoronoiCellsA, iv::VoronoiCellIndex) = getindex(c,iv._ix, iv._iy, iv._ind)
 # return integer index into big 1d array of all cells
 getcellindex(c::VoronoiCellsA, i::Int, j::Int, k::Int) =  c._grid[i,j][k]
 getcellindex(c::VoronoiCellsA, iv::VoronoiCellIndex) = getcellindex(c, splat(iv)...)
-#getcellindex(c::VoronoiCellsA, iv::VoronoiCellIndex) = getcellindex(c, iv._ix, iv._iy, iv._ind)
 Base.length(c::VoronoiCellsA) = length(c._cells)
 ngrid(c::VoronoiCellsA) = c._ngrid
 
@@ -488,7 +432,6 @@ end
 # of box that gp is in.
 # This probably throws away carefully preserved precision.
 # Should we use width of area rather than 1.0 ?
-#function find_grid_element(x::Float64, y::Float64, ngrid::Int) = find_grid_element(Point2D(x,y),ngrid)
 function find_grid_element(pt::Point2D, ngrid::Int)    
     ix::Int = round(Int64, (getx(pt) - 1.0) * ngrid) + 1
     iy::Int = round(Int64, (gety(pt) - 1.0) * ngrid) + 1
@@ -530,21 +473,6 @@ function cellstogrid(cells::Array{VoronoiCell,1}, ngrid::Int, gscale, gshift, ga
     VoronoiCellsA(ngrid,cells,gridcells, gscale, gshift, gareascale)    
 end
 
-# disabled this. would fails anyway
-# # generate big array of cells from tesselation and store them in grid structure
-# function voronoicells(t::DelaunayTessellation2D, ngrid::Int)
-#     cells = collect(VoronoiCell,voronoicellsnogrid(t))
-#     cellstogrid(cells, ngrid)
-# end
-
-# generate as above, but choose a good default number of elements in the grid based on the
-# number of cells (good if they are uniformly distributed)
-# function voronoicells(t::DelaunayTessellation2D)
-#     cells = collect(VoronoiCell,voronoicellsnogrid(t))
-#     ngrid = round(Int,sqrt(length(cells))/10)
-#     cellstogrid(cells, ngrid)
-# end
-
 # Version 0.5.0-dev+3385 (2016-04-02 23:53 UTC) throws an error when
 # trying to use 'collect' as in commented out code above. So
 # we make an explicit loop to create the cell files.
@@ -580,17 +508,10 @@ function findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Poin
     ifound
 end
 
-# Find index into gc._cells of cell containing (x,y) searching in indarray
-#findindexA(cells::Array{VoronoiCell,1}, indarray::Array{Int,1}, p::Point2D) = findindexA(cells,indarray,getx(p),gety(p))
-
 # same as findindexA, but gc contains all structures and we identify index (i,j)
 # of grid element corresponding to short array of indices.
 # Find cell containing (x,y) in bin (i,j) and return index into gc._cells
-# findindexingrid(gc::VoronoiCellsA, i, j, x, y) = findindexA(gc._cells,gc._grid[i,j],x,y)
 findindexingrid(gc::VoronoiCellsA, i, j, pt) = findindexA(gc._cells,gc._grid[i,j],pt)    
-
-# TODO: make cleaner use of (x,y)  <--> Point2D(x,y)
-#function findindex00(gridcells::VoronoiCellsA, x::Float64, y::Float64) = findindex00(gridcells,Point2D(x,y))
     
 function findindex00(gridcells::VoronoiCellsA, pt::Point2D)
     (ix::Int,iy::Int) = find_grid_element(pt,size(gridcells._grid,1))
@@ -605,9 +526,7 @@ end
 # of randomly chosen points. In these cases, we look for the point in the neighboring bins.
 # Test shows that this works for all random points (no misses found in 10^7 or more trials)
 # Each case below occurs in 10^6 trials.
-#function findindex0(grc::VoronoiCellsA, x::Float64, y::Float64)
 function findindex0(grc::VoronoiCellsA, p::Point2D)
-#    (x::Float64,y::Float64) = (getx(p),gety(p))
     (ix::Int,iy::Int, ind::Int) = findindex00(grc,p)
     ind != 0 && return (ix,iy,ind)
     if ix > 1
@@ -665,32 +584,14 @@ function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
     length(gridcells[ix,iy]) >= hint && invoronoicell(gridcells[ix,iy,hint],p) && return (ix,iy,hint)
     findindex0(gridcells,p)
 end
-# function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
-#     (ix,iy) = find_grid_element(p,size(gridcells._grid,1))
-#     length(gridcells[ix,iy] >= hint) && invoronoicell(gridcells[ix,iy,hint],p) && return (ix,iy,hint)
-#     findindex0(gridcells,p)
-# end
 
-#findindex0(gridcells::VoronoiCellsA, x,y) = findindex0(gridcells, Point2D(x,y))
-
-#findindex0(gridcells::VoronoiCellsA, hint::Int, x,y) = findindex0(gridcells, hint, Point2D(x,y))
-#findindex0(gridcells::VoronoiCellsA, hint, p::Point2D) = findindex0(gridcells, hint, getx(p), gety(p))
-
-findindex(gridcells::VoronoiCellsA, x,y) = VoronoiCellIndex(findindex0(gridcells,x,y)...)
+findindex(gridcells::VoronoiCellsA, x,y) = VoronoiCellIndex(findindex0(gridcells,Point2D(x,y))...)
 findindex(gridcells::VoronoiCellsA, p::Point2D) = VoronoiCellIndex(findindex0(gridcells,p)...)
 
 findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, p::Point2D) =
     VoronoiCellIndex(findindex0(gridcells,hint._ind, p)...)
 findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, x,y) = VoronoiCellIndex(findindex0(gridcells,hint._ind, x,y)...)
 
-# Probably don't use this, because we would have to prevent errors first,
-# which is expensive.
-# function findindex1(gridcells::VoronoiCellsA, p::Point2D)
-#     (ix,iy,ind) = findindex0(gridcells,p)
-#     ind == 0 && error("locate: Can't find grid box for point ", p, ".")
-#     return(ix,iy,ind)
-# end
-# findindex1(gridcells::VoronoiCellsA, x,y) = findindex1(gridcells, Point2D(x,y))
 
 # Return false if there is no complete cell containing p
 function isexternal(gridcells::VoronoiCellsA, p::Point2D)
@@ -801,16 +702,6 @@ end
 
 ####
 
-# !!!! DON'T USE THIS! We made VoronoiCellsA immutable
-# For Poisson point process, origin is at zero zero and average cell
-# size is 1.
-# function standard_scale_and_shift!(gcells::VoronoiCellsA, n::Int)
-#     gcells._shift = 1.5
-#     gcells._scale = sqrt(n)
-#     gcells._areascale = convert(Float64,n)
-#     nothing
-# end
-
 # Scaled versions of some functions. The tesselated region, approximately
 # 1.0 <= x,y, 2.0  is scaled and shifted to coordinates convenient for the
 # user.
@@ -826,7 +717,6 @@ sfindindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, x,y) = findindex(gr
 sarea(gcells::VoronoiCellsA, i::Int) = area(gcells[i]) * getareascale(gcells)
 sarea(gcells::VoronoiCellsA, i::Int, j::Int, k::Int) = area(gcells[i,j,k]) * getareascale(gcells)
 sarea(gcells::VoronoiCellsA, idx::VoronoiCellIndex) = sarea(gcells, splat(idx)...)
-#sarea(gcells::VoronoiCellsA, idx::VoronoiCellIndex) = sarea(gcells, idx._ix, idx._iy, idx._ind)
 smaxcoord(gcells) = scale(gcells,max_coord)
 smincoord(gcells) = scale(gcells,min_coord)
 sgetgenerator(gcells::VoronoiCellsA, c::VoronoiCell) = scale(gcells,c._generator)

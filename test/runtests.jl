@@ -8,6 +8,8 @@ cells = poissonvoronoicells(10^2)
 
 @test typeof(sarea(cells,1)) == Float64
 @test typeof(area(cells[1])) == Float64
+@test typeof(random_cell(cells)) == VoronoiCells.VoronoiCell
+@test isvalid(findindex(cells,1.5,1.5))
 
 # Test that any point in the bulk is covered by a cell.
 function testrand(cells,n)
