@@ -378,7 +378,7 @@ function random_cell(c::VoronoiCellsA)
     while true
         pt = random_point()
         ntries += 1
-        idx = VoronoiCellIndex(findindex0(c,pt)...)
+        idx = findindex0(c,pt)
         if isvalid(idx) break end
         if ntries > 1000 error("VoronoiCells: can't find a random cell") end
     end
@@ -522,7 +522,7 @@ end
 macro maybe_return_from_find_index()
     esc(quote
         ind = findindexingrid(grc,ix0,iy0,p)
-        ind != 0 && return (ix0,iy0,ind)
+        ind != 0 && return VoronoiCellIndex(ix0,iy0,ind)
         end)
 end
 
@@ -534,7 +534,7 @@ end
 # Each case caught below occurs in 10^6 trials.
 function findindex0(grc::VoronoiCellsA, p::Point2D)
     (ix::Int,iy::Int, ind::Int) = findindex00(grc,p)
-    ind != 0 && return (ix,iy,ind)
+    ind != 0 && return VoronoiCellIndex(ix,iy,ind)
     if ix > 1
         ix0 = ix-1
         iy0 = iy
@@ -571,7 +571,7 @@ function findindex0(grc::VoronoiCellsA, p::Point2D)
         ix0 = ix
         @maybe_return_from_find_index
     end
-    return (ix,iy,ind)
+    return VoronoiCellIndex(ix,iy,ind)
 end
 
 # User gives last returned index as hint if new p is close to p for last call
@@ -583,17 +583,17 @@ function findindex0(gridcells::VoronoiCellsA, hint::Int, p::Point2D)
     findindex0(gridcells,p)
 end
 
-findindex(gridcells::VoronoiCellsA, x,y) = VoronoiCellIndex(findindex0(gridcells,Point2D(x,y))...)
-findindex(gridcells::VoronoiCellsA, p::Point2D) = VoronoiCellIndex(findindex0(gridcells,p)...)
+findindex(gridcells::VoronoiCellsA, x,y) = findindex0(gridcells,Point2D(x,y))
+findindex(gridcells::VoronoiCellsA, p::Point2D) = findindex0(gridcells,p)
 
 findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, p::Point2D) =
-    VoronoiCellIndex(findindex0(gridcells,hint._ind, p)...)
-findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, x,y) = VoronoiCellIndex(findindex0(gridcells,hint._ind, x,y)...)
+    findindex0(gridcells,hint._ind, p)
+findindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, x,y) = findindex0(gridcells,hint._ind, x,y)
 
 # Return false if there is no complete cell containing p
 function isexternal(gridcells::VoronoiCellsA, p::Point2D)
-    (ix,iy,ind) = findindex0(gridcells,p)
-    ind == 0 && return true
+    idx = findindex0(gridcells,p)
+    idx._ind == 0 && return true
     return false
 end
 
