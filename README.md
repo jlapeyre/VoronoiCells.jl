@@ -80,6 +80,15 @@ isexternal(cell[i])
 ```
 Returns `true` if the vertices of the cell lie entirely within the unit square [1,2] x [1,2].
 
+
+```julia
+cells = poissonvoronoicells(npts)
+random_cell(cell)
+```
+Returns the cell at a randomly chosen point on the plane. (Resampling until a point
+containing a cell is found.
+
+
 ```julia
 t = poissontesselation(npts)
 t = approxpoissontesselation(npts)
