@@ -14,7 +14,7 @@ end
 
 
 export VoronoiCell, VoronoiCellsA, voronoicells, voronoicellsnogrid, findindex, locate, invoronoicell, area, avoronoicellsnogrid
-export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale
+export getcellindex,isexternal, nverts, nedges, getgenerator, scale, iscale, get_
 
 export VoronoiCellIndex, isvalid, getinvalidcellindex
 
@@ -22,8 +22,8 @@ export VoronoiCellIndex, isvalid, getinvalidcellindex
 export cellstogrid, poissontesselation, poissonvoronoicells, poissonvoronoicellsnogrid,
 approxpoissontesselation, approxpoissonvoronoicells, approxpoissonvoronoicellsnogrid,
        ngrid, findindex0
-export slocate, sfindindex0, sfindindex, sarea, smaxcoord, smincoord, sgetgenerator
-export getareascale, getscale, getshift, getcells, random_cell
+export slocate, sfindindex0, sfindindex, area, sarea, smaxcoord, smincoord, sgetgenerator
+export getareascale, getscale, getshift, getcells, random_cell, random_cell_index
 
 ####
 
@@ -69,7 +69,14 @@ function random_coordinate()
     min_coord+rand()*width
 end
 
+function random_coordinate(cutoff)
+    width = (max_coord - min_coord) - 2*cutoff
+    min_coord + cutoff + rand()*width
+end
+
+
 random_point() = Point2D(random_coordinate(),random_coordinate())
+random_point(cutoff) = Point2D(random_coordinate(cutoff),random_coordinate(cutoff))
 
 #### Some functions that only operate on VoronoiDelaunay objects.
 
@@ -384,6 +391,47 @@ function random_cell(c::VoronoiCellsA)
     c[idx]
 end
 
+function random_cell_index(c::VoronoiCellsA)
+    ntries::Int = 0
+    local idx::VoronoiCellIndex
+    while true
+        pt = random_point()
+        ntries += 1
+        idx = findindex0(c,pt)
+        if isvalid(idx) break end
+        if ntries > 1000 error("VoronoiCells: can't find a random cell") end
+    end
+    idx
+end
+
+
+function random_cell(c::VoronoiCellsA, cutoff)
+    ntries::Int = 0
+    local idx::VoronoiCellIndex
+    while true
+        pt = random_point(cutoff)
+        ntries += 1
+        idx = findindex0(c,pt)
+        if isvalid(idx) break end
+        if ntries > 1000 error("VoronoiCells: can't find a random cell") end
+    end
+    c[idx]
+end
+
+function random_cell_index(c::VoronoiCellsA, cutoff)
+    ntries::Int = 0
+    local idx::VoronoiCellIndex
+    while true
+        pt = random_point(cutoff)
+        ntries += 1
+        idx = findindex0(c,pt)
+        if isvalid(idx) break end
+        if ntries > 1000 error("VoronoiCells: can't find a random cell") end
+    end
+    idx
+end
+
+
 
 Base.isvalid(iv::VoronoiCellIndex) = iv._ind != 0
 splat(iv::VoronoiCellIndex) = (iv._ix,iv._iy,iv._ind)
@@ -455,6 +503,7 @@ function make_grid_cells(cells::Array{VoronoiCell,1}, ngrid::Int)
     gridcells
 end
 
+# BUG!! area scale is wrong here, because cells have been thrown away
 # Assign indices of cells in big linear array to arrays in each
 # grid element and return new object.
 # Cells are assigned to the grid element the generator of the cell is in.
@@ -685,9 +734,14 @@ sfindindex0(gcells::VoronoiCellsA, hint, p::Point2D) = findindex0(gcells, hint, 
 sfindindex(gcells::VoronoiCellsA, x,y) = findindex(gcells,iscale(gcells,x),iscale(gcells,y))
 sfindindex(gcells::VoronoiCellsA, p::Point2D) = findindex(gcells, iscale(gcells,p))
 sfindindex(gridcells::VoronoiCellsA, hint::VoronoiCellIndex, x,y) = findindex(gridcells, hint, iscale(gridcells,x),iscale(gridcells,y))
+
 sarea(gcells::VoronoiCellsA, i::Int) = area(gcells[i]) * getareascale(gcells)
 sarea(gcells::VoronoiCellsA, i::Int, j::Int, k::Int) = area(gcells[i,j,k]) * getareascale(gcells)
 sarea(gcells::VoronoiCellsA, idx::VoronoiCellIndex) = sarea(gcells, splat(idx)...)
+
+area(gcells::VoronoiCellsA, i::Int, j::Int, k::Int) = area(gcells[i,j,k])
+area(gcells::VoronoiCellsA, idx::VoronoiCellIndex) = area(gcells, splat(idx)...)
+
 smaxcoord(gcells) = scale(gcells,max_coord)
 smincoord(gcells) = scale(gcells,min_coord)
 sgetgenerator(gcells::VoronoiCellsA, c::VoronoiCell) = scale(gcells,c._generator)
