@@ -1,6 +1,12 @@
 # VoronoiCells
-
 *provides access to Vornoi cells in [VoronoiDelaunay.jl](https://github.com/JuliaGeometry/VoronoiDelaunay.jl)*
+
+Linux, OSX: [![Build Status](https://travis-ci.org/jlapeyre/VoronoiCells.jl.svg)](https://travis-ci.org/jlapeyre/VoronoiCells.jl)
+&nbsp;
+Windows: [![Build Status](https://ci.appveyor.com/api/projects/status/github/jlapeyre/VoronoiCells.jl?branch=master&svg=true)](https://ci.appveyor.com/project/jlapeyre/voronoicells-jl)
+&nbsp; &nbsp; &nbsp;
+[![Coverage Status](https://coveralls.io/repos/jlapeyre/VoronoiCells.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/jlapeyre/VoronoiCells.jl?branch=master)
+[![codecov.io](http://codecov.io/github/jlapeyre/VoronoiCells.jl/coverage.svg?branch=master)](http://codecov.io/github/jlapeyre/VoronoiCells.jl?branch=master)
 
 ### Some functions
 
