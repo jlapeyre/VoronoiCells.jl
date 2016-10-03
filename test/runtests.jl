@@ -2,7 +2,7 @@ using VoronoiCells
 using Base.Test
 using GeometricalPredicates
 
-@test (cells = poissonvoronoicells(10^4) ; true)
+@test (cells = poissonvoronoicells(10^3) ; true)
 
 cells = poissonvoronoicells(10^2)
 
