@@ -1,5 +1,5 @@
 # VoronoiCells
-*provides access to Vornoi cells in [VoronoiDelaunay.jl](https://github.com/JuliaGeometry/VoronoiDelaunay.jl)*
+*provides access to Voronoi cells in [VoronoiDelaunay.jl](https://github.com/JuliaGeometry/VoronoiDelaunay.jl)*
 
 Linux, OSX: [![Build Status](https://travis-ci.org/jlapeyre/VoronoiCells.jl.svg)](https://travis-ci.org/jlapeyre/VoronoiCells.jl)
 &nbsp;
@@ -8,12 +8,28 @@ Windows: [![Build Status](https://ci.appveyor.com/api/projects/status/github/jla
 [![Coverage Status](https://coveralls.io/repos/jlapeyre/VoronoiCells.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/jlapeyre/VoronoiCells.jl?branch=master)
 [![codecov.io](http://codecov.io/github/jlapeyre/VoronoiCells.jl/coverage.svg?branch=master)](http://codecov.io/github/jlapeyre/VoronoiCells.jl?branch=master)
 
+#### Other package with same name
+
+There is a package by the same name [VoronoiCells.jl](https://github.com/JuliaGeometry/VoronoiCells.jl) that was created about
+nine months later than this package. The other package is registered, this one is not.
+
+#### Installation
+
+`VoronoiCells` depends on `VoronoiDelaunay.jl` which depends on `GeometricalPredicates.jl`, and often, only the
+development version of `GeometricalPredicates.jl` will successfully load. You can switch to the development version like this:
+
+```julia
+Pkg.add("GeometricalPredicates")
+Pkg.checkout("GeometricalPredicates")
+Pkg.clone("https://github.com/jlapeyre/VoronoiCells.jl")
+```
+
 ### Some functions
 
 ```julia
 cells = poissonvoronoicells(npts)
 ```
-Sample a Poisson point process in the plain with mean `npts` 'generator' points per unit square and
+Sample a Poisson point process in the plane with mean `npts` 'generator' points per unit square and
 return the Voronoi cells. Only complete cells within the unit square [1,2] x [1,2] are returned.
 The cells very near the boundary do not have the same geometrical statistics
 as those in the bulk. `length(cells)` returns the number of cells retained. If `Distributions.jl` is
@@ -92,7 +108,7 @@ containing a cell is found.
 t = poissontesselation(npts)
 t = approxpoissontesselation(npts)
 ```
-Return Delaunay tesselation of the poisson point process in the plane.
+Return Delaunay tesselation of the Poisson point process in the plane.
 
 ```julia
 gcells = voronoicells(t)
@@ -149,3 +165,31 @@ cells = poissonvoronoicells(npts)
 sizeof(cells[1])
 ```
 sizeof a single cell.
+
+### Unexported functions
+
+These functions have doc strings.
+
+
+<!--  LocalWords:  VoronoiCells Voronoi VoronoiDelaunay jl OSX nbsp
+ -->
+<!--  LocalWords:  codecov io GeometricalPredicates julia npts ndiv
+ -->
+<!--  LocalWords:  poissonvoronoicells approxpoissonvoronoicells idx
+ -->
+<!--  LocalWords:  poissonvoronoicellsnogrid VoronoiCell smaxcoord dx
+ -->
+<!--  LocalWords:  smincoord sfindindex findindex isvalid searche dat
+ -->
+<!--  LocalWords:  unscaled getinvalidcellindex sarea nedges nverts
+ -->
+<!--  LocalWords:  fname cellfile isexternal Resampling Delaunay Bool
+ -->
+<!--  LocalWords:  poissontesselation approxpoissontesselation gcells
+ -->
+<!--  LocalWords:  tesselation voronoicells voronoicellsnogrid nsteps
+ -->
+<!--  LocalWords:  DelaunayTessellation walkmean sumarea nareas stp
+ -->
+<!--  LocalWords:  println tesselated printf sizeof
+ -->

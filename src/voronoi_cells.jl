@@ -46,6 +46,11 @@ distanceL1(p1::Point2D,p2::Point2D) = abs(getx(p2)-getx(p1)) + abs(gety(p2)-gety
 lineside(p1,p2,p) = (gety(p)-gety(p1))*(getx(p2)-getx(p1)) - (getx(p)-getx(p1))*(gety(p2)-gety(p1))
 
 # true if p is inside poly, ie. if lineside gives the same sign for all edges in Voronoi cell
+"""
+    inconvexpolygon(poly::Array{Point2D,1}, p0::Point2D)
+
+return `true` if `p0` is inside the polygon `poly`.
+"""
 function inconvexpolygon(poly::Array{Point2D,1}, p0::Point2D)
     is_inconvexpolygon = true
     n = length(poly)
@@ -199,8 +204,13 @@ end
 
 #### Begin code specific to VoronoiCells
 
-# _generator is one of the points in the point process. There is exactly one such point in each
-# cell.
+"""
+    VoronoiCell
+
+The VoronoiCell type. It contains a generator point and an array of the vertices of
+the cell. The field `_generator` is one of the points in the point process. There is exactly one such point in each
+cell.
+"""
 immutable VoronoiCell
     _generator::Point2D
     _verts::Array{Point2D,1}
@@ -213,6 +223,11 @@ nedges(c::VoronoiCell) = length(c._verts) + 1
 getgenerator(c::VoronoiCell) = c._generator
 
 # Area of irregular polygon. Don't make use of convex property.
+"""
+    area(c::VoronoiCell)
+
+return the area of `c::VoronoiCell`.
+"""
 function area(c::VoronoiCell)
     vs::Array{Point2D,1} = c._verts
     A::Float64 = 0.0
@@ -287,6 +302,14 @@ function find_cell(trigs,tr, iv_gen, iv_opp, visited)
 end
 
 # Using  produce, collect is much slower than just returning an array with avoronoicellsnogrid
+
+"""
+    avoronoicellsnogrid(t::DelaunayTessellation2D)
+
+return an iterator of the cells `a::Array{VoronoiCell,1}` in the tesselation `t`.
+This function uses `Task` and is much slower than `avoronoicellsnogrid(t::DelaunayTessellation2D)`, which
+simply returns an array.
+"""
 function voronoicellsnogrid(t::DelaunayTessellation2D)
     visited::Array{Bool,1} = zeros(Bool, t._last_trig_index)
     visited[1] = true
@@ -319,7 +342,13 @@ function voronoicellsnogrid(t::DelaunayTessellation2D)
     Task(voronoicelliterator)
 end
 
+"""
+    avoronoicellsnogrid(t::DelaunayTessellation2D)
 
+return an array of the cells `a::Array{VoronoiCell,1}` in the tesselation `t`.
+This function is faster than `voronoicellsnogrid(t::DelaunayTessellation2D)`, which
+uses lightweight threads.
+"""
 function avoronoicellsnogrid(t::DelaunayTessellation2D)
     visited = zeros(Bool, t._last_trig_index)
     visited[1] = true
@@ -661,6 +690,14 @@ locate(gridcells::VoronoiCellsA,x,y) =  locate(gridcells, Point2D(x,y))
 
 # We should generate all these with a macro, of course!
 if haveDistributions
+
+"""
+    poissontesselation(n::Int)
+
+return a tesselation `t::DelaunayTessellation` of a sample of the
+Poisson point process in the region of the plane used by `GeometricalPredicates`.
+This depends on `Distributions.jl`.
+"""    
 @eval function poissontesselation{T<:Real}(n::T)
     width = max_coord - min_coord
     npts = rand(Poisson(n))
@@ -680,6 +717,13 @@ else
 end
 
 # Not an exact sample of the Poisson point process in the plane
+"""
+    approxpoissontesselation(n::Int)
+
+return a tesselation `t::DelaunayTessellation` of an approximation of a sample of the
+Poisson point process in the region of the plane used by `GeometricalPredicates`.
+Exactly `n` generator points will be in the sample.
+"""
 function approxpoissontesselation(n::Int)
     width = max_coord - min_coord
     a = Point2D[Point(min_coord+rand()*width, min_coord+rand()*width) for i in 1:n]  # this is very fast
