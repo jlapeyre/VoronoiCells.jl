@@ -14,4 +14,4 @@ script:
   - julia -e 'Pkg.add("GeometricalPredicates"); Pkg.checkout("GeometricalPredicates")'
   - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("VoronoiCells"); Pkg.test("VoronoiCells"; coverage=true)'
 after_success:
-  - julia -e 'Pkg.add("Coverage"); cd(Pkg.dir("ZChop")); using Coverage; Coveralls.submit(process_folder()); Codecov.submit(process_folder())'
+  - julia -e 'Pkg.add("Coverage"); cd(Pkg.dir("VoronoiCells")); using Coverage; Coveralls.submit(process_folder()); Codecov.submit(process_folder())'
