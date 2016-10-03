@@ -1,11 +1,6 @@
 # VoronoiCells
 
-This module provides access to Vornoi cells in the tesselation created
-by [VoronoiDelaunay.jl](https://github.com/JuliaGeometry/VoronoiDelaunay.jl)
-
-This the first version, with a rather sprawling interface that should not be
-considered stable. Following is a brief description of some of the
-most recent, high-level interface.
+*provides access to Vornoi cells in [VoronoiDelaunay.jl](https://github.com/JuliaGeometry/VoronoiDelaunay.jl)*
 
 ### Some functions
 
@@ -28,7 +23,7 @@ requirement with increasing `ndiv`.
 cells = poissonvoronoicellsnogrid(npts)
 ```
 
-This returns an array of `VoronoiCell`'s without the grid structure for locating them.
+Return an array of `VoronoiCell`'s without the grid structure for locating them.
 
 
 ```julia
@@ -42,7 +37,7 @@ idx = sfindindex(cells,x,y)
 idx = findindex(cells,x,y)
 isvalid(idx)
 ```
-`sfindindex` searches efficiently for and returns the index of the cell containing the scaled point `(x,y)`.
+searche efficiently for and returns the index of the cell containing the scaled point `(x,y)`.
 The cell may then be retrieved via `cells[idx]`.  `findindex` finds cells at unscaled (within the shifted unit square)
 coordinates. If no cell contains the point `(x,y)`, an invalid index is returned. This condition is checked with `isvalid()`.
 
@@ -54,7 +49,7 @@ Return `true` if a cell was found containing `(x,y)`, otherwise `false`.
 ```julia
 getinvalidcellindex()
 ```
-Returns an invalid cell index.
+Return an invalid cell index.
 
 ```julia
 c = cells[idx], sarea(cells,idx), nedges(c), nverts(c)
@@ -73,21 +68,19 @@ cells = read_one_cellfile("fname.dat")
 ```
 Read cells from file written by `write`.
 
-
 ```julia
 cells = poissonvoronoicells(npts)
 isexternal(cell[i])
 ```
-Returns `true` if the vertices of the cell lie entirely within the unit square [1,2] x [1,2].
+Return `true` if the vertices of the cell lie entirely within the unit square [1,2] x [1,2].
 
 
 ```julia
 cells = poissonvoronoicells(npts)
 random_cell(cell)
 ```
-Returns the cell at a randomly chosen point on the plane. (Resampling until a point
+Return the cell at a randomly chosen point on the plane. (Resampling until a point
 containing a cell is found.
-
 
 ```julia
 t = poissontesselation(npts)
@@ -106,6 +99,7 @@ Return the cells corresponding to the `DelaunayTessellation2D` `t`.
 Here is sample code that inefficiently measures the second moment of the cell area
 distribution by doing a random walk and recording the area of the containing cell
 at each step.
+
 ```julia
 flip() = 2*rand(Bool) - 1
 
