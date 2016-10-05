@@ -461,10 +461,28 @@ function random_cell_index(c::VoronoiCellsA, cutoff)
 end
 
 
+"""
+isvalid(idx::VoronoiCellIndex)
 
+Return `true` if `idx` is valid cell index.
+
+## Example
+
+idx = findindex(cells,x,y)
+isvalid(idx)
+
+return true if a cell was found containing `(x,y)`, otherwise `false`.
+"""
 Base.isvalid(iv::VoronoiCellIndex) = iv._ind != 0
 splat(iv::VoronoiCellIndex) = (iv._ix,iv._iy,iv._ind)
 ==(iv1::VoronoiCellIndex, iv2::VoronoiCellIndex) = splat(iv1) == splat(iv2)
+
+"""
+    getinvalidcellindex()
+
+return an invalid cell index. This is useful for initializing an index
+that will later be checked for validity.
+"""
 getinvalidcellindex() = VoronoiCellIndex(0,0,0)
 
 getareascale(gcells::VoronoiCellsA) = gcells._areascale

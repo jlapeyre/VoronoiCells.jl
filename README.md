@@ -54,12 +54,8 @@ smaxcoord(cells), smincoord(cells)
 Scaled maximum and minimum of both `x` and `y` coordinates. The scaling is such that
 the average cell size is (approximately) `1` and the origin is at the center of the square area.
 
-```julia
-idx = sfindindex(cells,x,y)
-idx = findindex(cells,x,y)
-isvalid(idx)
-```
-searche efficiently for and returns the index of the cell containing the scaled point `(x,y)`.
+
+search efficiently for and returns the index of the cell containing the scaled point `(x,y)`.
 The cell may then be retrieved via `cells[idx]`.  `findindex` finds cells at unscaled (within the shifted unit square)
 coordinates. If no cell contains the point `(x,y)`, an invalid index is returned. This condition is checked with `isvalid()`.
 
